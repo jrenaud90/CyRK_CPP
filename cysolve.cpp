@@ -29,7 +29,8 @@ void method_solve(
         // Common Inputs
         diffeq_ptr, solution_ptr, t_start, t_end, y0_ptr, num_y,
         // RK Inputs
-        capture_extra, num_extra, args_ptr, max_num_steps, max_ram_MB, rtol, atol, rtols_ptr, atols_ptr, max_step_size, first_step_size);
+        capture_extra, num_extra, args_ptr, max_num_steps, max_ram_MB, rtol, atol, rtols_ptr, atols_ptr, max_step_size, first_step_size
+    );
 
     // Run integrator
     while (solver.check_status())

@@ -83,8 +83,7 @@ int main()
         std::cout << "\nSIZE: " << final_size << std::endl;
         std::cout << "\nMessage: " << msg_ptr << std::endl;
         std::cout << "\n\n AVERAGE: " << running_sum / max_i << "us\n" << std::endl;
-        break;
-    //break;
+        //break;
     /*std::cout << "Done! Final size: " << final_size << std::endl;
 
     std::ofstream datastream;

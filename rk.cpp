@@ -42,7 +42,7 @@ RKSolver::RKSolver(
 
     // Setup tolerances
     // User can provide an array of relative tolerances, one for each y value.
-    // The length of the pointer array must be the same as y0 (and <= 50).
+    // The length of the pointer array must be the same as y0 (and <= 25).
 
     double temp_double;
     double min_rtol = INF;

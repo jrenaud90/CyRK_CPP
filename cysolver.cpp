@@ -33,10 +33,10 @@ CySolverBase::CySolverBase(
             this->storage_ptr->error_code = -1;
             this->storage_ptr->update_message("CySolverBase Attribute Error: `capture_extra` set to True, but `num_extra` set to 0.");
         }
-        else if (num_extra > 50)
+        else if (num_extra > 25)
         {
             this->storage_ptr->error_code = -1;
-            this->storage_ptr->update_message("CySolverBase Attribute Error: `num_extra` exceeds the maximum supported value of 50.");
+            this->storage_ptr->update_message("CySolverBase Attribute Error: `num_extra` exceeds the maximum supported value of 25.");
         }
 
     }
@@ -46,10 +46,10 @@ CySolverBase::CySolverBase(
         this->storage_ptr->update_message("CySolverBase Attribute Error: `capture_extra` set to False, but `num_extra` > 0.");
     }
 
-    if (num_y > 50)
+    if (num_y > 25)
     {
         this->storage_ptr->error_code = -1;
-        this->storage_ptr->update_message("CySolverBase Attribute Error: `num_y` exceeds the maximum supported value of 50.");
+        this->storage_ptr->update_message("CySolverBase Attribute Error: `num_y` exceeds the maximum supported value of 25.");
     }
     else if (num_y == 0)
     {

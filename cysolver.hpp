@@ -30,13 +30,13 @@ protected:
     double num_y_dbl = 0.0;
     double num_y_sqrt = 0.0;
     size_t num_dy = 0;
-    // The size of the stack allocated tracking arrays is equal to the maximum allowed `num_y` (50).
-    double y0[50];
-    double y_old[50];
-    double y_now[50];
-    // For dy, both the dy/dt and any extra outputs are stored. So the maximum size is `num_y` (50) + `num_extra` (50)
-    double dy_old[100];
-    double dy_now[100];
+    // The size of the stack allocated tracking arrays is equal to the maximum allowed `num_y` (25).
+    double y0[25];
+    double y_old[25];
+    double y_now[25];
+    // For dy, both the dy/dt and any extra outputs are stored. So the maximum size is `num_y` (25) + `num_extra` (25)
+    double dy_old[50];
+    double dy_now[50];
 
     // dy_now_ptr and y_now_ptr are declared in public.
     double* y0_ptr = &y0[0];

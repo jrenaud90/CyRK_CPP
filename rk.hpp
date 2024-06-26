@@ -1,5 +1,8 @@
 #pragma once
 
+#include "cysolver.hpp"
+
+
 // ########################################################################################################################
 // Runge - Kutta 2(3)
 // ########################################################################################################################
@@ -360,4 +363,117 @@ const double DOP853_E5[13] = {
     0.8192320648511571246570742613e-1,
     -0.2235530786388629525884427845e-1,
     0.
+};
+
+
+// ########################################################################################################################
+// Classes
+// ########################################################################################################################
+class RKSolver : public CySolverBase {
+
+// Attributes
+protected:
+    // Step globals
+    const double error_safety = SAFETY;
+    const double min_step_factor = MIN_FACTOR;
+    const double max_step_factor = MAX_FACTOR;
+
+    // RK constants
+    int order = 0;
+    int error_estimator_order = 0;
+    double error_exponent = 0.0;
+    size_t n_stages = 0;
+    size_t len_Acols = 0;
+    size_t len_C = 0;
+    size_t nstages_numy = 0;
+
+    // Pointers to RK constant arrays
+    const double* C_ptr = nullptr;
+    const double* A_ptr = nullptr;
+    const double* B_ptr = nullptr;
+    const double* E_ptr = nullptr;
+    const double* E3_ptr = nullptr;
+    const double* E5_ptr = nullptr;
+    const double* P_ptr = nullptr;
+    const double* D_ptr = nullptr;
+    double* K_ptr = &this->K[0];
+
+    // K is not const. Its values are stored in an array that is held by this class.
+    double K[1] = { std::nan("") };
+
+    // Tolerances
+    // For the same reason num_y is limited, the total number of tolerances are limited.
+    double rtols[50] = { std::nan("") };
+    double atols[50] = { std::nan("") };
+    double* rtols_ptr = &rtols[0];
+    double* atols_ptr = &atols[0];
+    bool use_array_rtols = false;
+    bool use_array_atols = false;
+
+    // Step size parameters
+    double step = 0.0;
+    double step_size_old = 0.0;
+    double step_size = 0.0;
+    double max_step_size = 0.0;
+    bool user_provided_first_step_size = false;
+
+    // Error estimate
+    double error_norm = 0.0;
+
+
+// Methods
+protected:
+    virtual void p_estimate_error();
+    virtual void p_step_implementation() override;
+
+public:
+    RKSolver();
+    virtual ~RKSolver() override;
+    RKSolver(
+        // Input variables
+        DiffeqFuncType diffeq_ptr,
+        CySolverResult* storage_ptr,
+        const double t_start,
+        const double t_end,
+        double* y0_ptr,
+        size_t num_y,
+        bool capture_extra = false,
+        size_t num_extra = 0,
+        double* args_ptr = nullptr,
+        size_t max_num_steps = 0,
+        size_t max_ram_MB = 2000,
+        double rtol = 1.0e-3,
+        double atol = 1.0e-6,
+        double* rtols_ptr = nullptr,
+        double* atols_ptr = nullptr,
+        double max_step_size = MAX_STEP,
+        double first_step_size = 0.0
+    );
+    virtual void reset() override;
+    void calc_first_step_size();
+};
+
+
+
+class RK23 : public RKSolver {
+
+protected:
+    double K[4 * 50] = { 0.0 };
+
+public:
+    // Copy over base class constructors
+    using RKSolver::RKSolver;
+    virtual void reset() override;
+};
+
+
+class RK45 : public RKSolver {
+
+protected:
+    double K[7 * 50] = { 0.0 };
+
+public:
+    // Copy over base class constructors
+    using RKSolver::RKSolver;
+    virtual void reset() override;
 };

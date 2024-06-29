@@ -5,7 +5,7 @@
 CySolverBase::CySolverBase() {}
 CySolverBase::CySolverBase(
         DiffeqFuncType diffeq_ptr,
-        CySolverResult* storage_ptr,
+        std::shared_ptr<CySolverResult> storage_ptr,
         const double t_start,
         const double t_end,
         double* y0_ptr,
@@ -259,7 +259,7 @@ void CySolverBase::take_step()
 }
 
 
-void CySolverBase::change_storage(CySolverResult* new_storage_ptr, bool auto_reset)
+void CySolverBase::change_storage(std::shared_ptr<CySolverResult> new_storage_ptr, bool auto_reset)
 {
     // Change the storage reference. 
     this->storage_ptr = new_storage_ptr;

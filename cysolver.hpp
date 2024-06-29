@@ -4,6 +4,8 @@
 #include <cstring>
 #include <cstdio>
 
+#include <memory>
+
 #include "cysolution.hpp"
 #include "common.hpp"
 
@@ -59,7 +61,7 @@ protected:
 public:
 
     // Result storage
-    CySolverResult* storage_ptr = nullptr;
+    std::shared_ptr<CySolverResult> storage_ptr = nullptr;
 
     // Status attributes
     int status = -999;
@@ -80,7 +82,7 @@ public:
     CySolverBase(
         // Input variables
         DiffeqFuncType diffeq_ptr,
-        CySolverResult* storage_ptr,
+        std::shared_ptr<CySolverResult> storage_ptr,
         const double t_start,
         const double t_end,
         double* y0_ptr,
@@ -95,6 +97,6 @@ public:
     bool check_status();
     void diffeq();
     void take_step();
-    void change_storage(CySolverResult* new_storage_ptr, bool auto_reset = true);
+    void change_storage(std::shared_ptr<CySolverResult> new_storage_ptr, bool auto_reset = true);
     virtual void reset();
 };

@@ -1,11 +1,10 @@
 #include "cysolve.hpp"
-#include "rk.hpp"
 
 
 template <typename T>
 void method_solve(
         DiffeqFuncType diffeq_ptr,
-        CySolverResult* solution_ptr,
+        std::shared_ptr<CySolverResult> solution_ptr,
         const double t_start,
         const double t_end,
         double* y0_ptr,
@@ -40,7 +39,7 @@ void method_solve(
 }
 
 
-CySolverResult* solve_ivp(
+std::shared_ptr<CySolverResult> solve_ivp(
         DiffeqFuncType diffeq_ptr,
         double* t_span_ptr,
         double* y0_ptr,
@@ -100,7 +99,7 @@ CySolverResult* solve_ivp(
     }
 
     // Build classes
-    CySolverResult* solution_ptr = new CySolverResult(num_y, num_y + num_extra, expected_size);
+    std::shared_ptr<CySolverResult> solution_ptr = std::make_shared<CySolverResult>(num_y, num_y + num_extra, expected_size);
 
     switch (method)
     {

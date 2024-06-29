@@ -14,13 +14,12 @@ static void test_diffeq(double* dy_ptr, double time, double* y_ptr, double* args
     dy_ptr[1] = (0.02 * y0 - 1.) * y1;
 }
 
-int main()
-{
+int main(){
     //std::cout << "Running..." << std::endl;
 
     DiffeqFuncType diffeq_func = test_diffeq;
 
-    double time_span[2] = {0.0, 50.0};
+    double time_span[2] = {0.0, 500.0};
     double* time_span_ptr = &time_span[0];
     int method = 1;
     int max_i = 1000;
@@ -40,11 +39,12 @@ int main()
     double running_sum = 0.0;
     size_t final_size;
     size_t sol_size;
-    CySolverResult* result;
+    std::shared_ptr<CySolverResult> result;
     auto t1 = std::chrono::high_resolution_clock::now();
     auto t2 = std::chrono::high_resolution_clock::now();
-
-    while (true)
+    int k = 0;
+    double total_runner = 0.0;
+    while (k < 20)
     {
         running_sum = 0.0;
 
@@ -72,20 +72,23 @@ int main()
             std::strcpy(msg_ptr, result->message_ptr);
             sol_size = final_size * 2;
 
-            delete result;
-
             t2 = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double, std::micro> ms_double = t2 - t1;
             running_sum += ms_double.count();
             //std::cout << ms_double.count() << "ms\n";
         }
 
-        std::cout << "\nSIZE: " << final_size << std::endl;
-        std::cout << "\nMessage: " << msg_ptr << std::endl;
-        std::cout << "\n\n AVERAGE: " << running_sum / max_i << "us\n" << std::endl;
+        std::cout << "SIZE: " << final_size << std::endl;
+        std::cout << "Message: " << msg_ptr << std::endl;
+        std::cout << "AVERAGE: " << running_sum / max_i << "us\n" << std::endl;
+        total_runner += running_sum / max_i;
+        k += 1;
         //break;
-    /*std::cout << "Done! Final size: " << final_size << std::endl;
+    }
 
+    std::cout << "Done! Final Avg: " << total_runner / 20 << std::endl;
+
+    /*
     std::ofstream datastream;
 
     datastream.open("out.dat");
@@ -104,7 +107,5 @@ int main()
 
     //std::cin.get();
 
-
-    }
     return 0;
 }

@@ -432,7 +432,7 @@ public:
     RKSolver(
         // Input variables
         DiffeqFuncType diffeq_ptr,
-        CySolverResult* storage_ptr,
+        std::shared_ptr<CySolverResult> storage_ptr,
         const double t_start,
         const double t_end,
         double* y0_ptr,

@@ -1,14 +1,23 @@
 #include "cysolution.hpp"
 
+#include <iostream>
+
 
 // Constructors
 CySolverResult::CySolverResult() {}
-CySolverResult::CySolverResult(size_t num_y, size_t num_dy, size_t expected_size)
+CySolverResult::CySolverResult(size_t num_y, size_t num_extra, size_t expected_size)
 {
     // Pull out known information
     this->num_y = num_y;
-    this->num_dy = num_dy;
-    this->num_dy_dbl = num_dy;
+    // num_dy will be larger than num_y if the user wishes to capture extra output during integration.
+    this->num_extra = num_extra;
+    this->num_dy = this->num_y + this->num_extra;
+    this->num_dy_dbl = this->num_dy;
+
+    if (num_extra > 0)
+    {
+        this->capture_extra = true;
+    }
 
     // Initialize other parameters
     this->size = 0;
@@ -34,14 +43,27 @@ CySolverResult::~CySolverResult()
 void CySolverResult::p_expand_storage()
 {
     double new_storage_size_dbl = std::floor(DYNAMIC_GROWTH_RATE * this->storage_capacity);
+
     // Check if this new size is okay.
     if ((new_storage_size_dbl / this->num_dy_dbl) > SIZE_MAX_DBL)
     {
         this->error_code = -11;
         this->update_message("Value Error: Requested new vector size is larger than the limits set by the system (specifically the max of size_t).");
     }
-    else {
+    else
+    {
         this->storage_capacity = new_storage_size_dbl;
+
+        // Round to the nearest power of 2.
+        this->storage_capacity--;
+        this->storage_capacity |= this->storage_capacity >> 1;
+        this->storage_capacity |= this->storage_capacity >> 2;
+        this->storage_capacity |= this->storage_capacity >> 4;
+        this->storage_capacity |= this->storage_capacity >> 8;
+        this->storage_capacity |= this->storage_capacity >> 16;
+        this->storage_capacity |= this->storage_capacity >> 32;
+        this->storage_capacity++;
+
         try
         {
             this->time_domain_ref.reserve(this->storage_capacity);
@@ -98,18 +120,90 @@ void CySolverResult::save_data(double new_t, double* new_solution_y, double* new
 
     this->time_domain_ref.push_back(new_t);
 
-    // We use num_dy instead of num_y in the following loop because the user may have requested to
-    // capture additional output from the differential equation.
-    for (size_t dy_i = 0; dy_i < this->num_dy; dy_i++)
+    // Store y values (use push back if num_y less than 5 otherwise use insert)
+    switch (this->num_y)
     {
-        if (dy_i < this->num_y)
+        case 0:
+            break;
+        case 1:
+            this->solution_ref.push_back(new_solution_y[0]);
+            break;
+        case 2:
+            this->solution_ref.push_back(new_solution_y[0]);
+            this->solution_ref.push_back(new_solution_y[1]);
+            break;
+        case 3:
+            this->solution_ref.push_back(new_solution_y[0]);
+            this->solution_ref.push_back(new_solution_y[1]);
+            this->solution_ref.push_back(new_solution_y[2]);
+            break;
+        case 4:
+            this->solution_ref.push_back(new_solution_y[0]);
+            this->solution_ref.push_back(new_solution_y[1]);
+            this->solution_ref.push_back(new_solution_y[2]);
+            this->solution_ref.push_back(new_solution_y[3]);
+            this->solution_ref.push_back(new_solution_y[4]);
+            break;
+        case 5:
+            this->solution_ref.push_back(new_solution_y[0]);
+            this->solution_ref.push_back(new_solution_y[1]);
+            this->solution_ref.push_back(new_solution_y[2]);
+            this->solution_ref.push_back(new_solution_y[3]);
+            this->solution_ref.push_back(new_solution_y[4]);
+            break;
+        case 6:
+            this->solution_ref.push_back(new_solution_y[0]);
+            this->solution_ref.push_back(new_solution_y[1]);
+            this->solution_ref.push_back(new_solution_y[2]);
+            this->solution_ref.push_back(new_solution_y[3]);
+            this->solution_ref.push_back(new_solution_y[4]);
+            this->solution_ref.push_back(new_solution_y[5]);
+        default:
+            this->solution_ref.insert(this->solution_ref.end(), new_solution_y, new_solution_y + this->num_y);
+    }
+
+    // Repeak for any extra information that is captured.
+    if (this->capture_extra)
+    {
+        switch (this->num_extra)
         {
-            // Store dependent results
-            this->solution_ref.push_back(new_solution_y[dy_i]);
-        }
-        else {
-            // Store extra output
-            this->solution_ref.push_back(new_solution_dy[dy_i]);
+            case 0:
+                break;
+            case 1:
+                this->solution_ref.push_back(new_solution_dy[this->num_y]);
+                break;
+            case 2:
+                this->solution_ref.push_back(new_solution_dy[this->num_y]);
+                this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
+                break;
+            case 3:
+                this->solution_ref.push_back(new_solution_dy[this->num_y]);
+                this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
+                this->solution_ref.push_back(new_solution_dy[this->num_y + 2]);
+                break;
+            case 4:
+                this->solution_ref.push_back(new_solution_dy[this->num_y]);
+                this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
+                this->solution_ref.push_back(new_solution_dy[this->num_y + 2]);
+                this->solution_ref.push_back(new_solution_dy[this->num_y + 3]);
+                break;
+            case 5:
+                this->solution_ref.push_back(new_solution_dy[this->num_y]);
+                this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
+                this->solution_ref.push_back(new_solution_dy[this->num_y + 2]);
+                this->solution_ref.push_back(new_solution_dy[this->num_y + 3]);
+                this->solution_ref.push_back(new_solution_dy[this->num_y + 4]);
+                break;
+            case 6:
+                this->solution_ref.push_back(new_solution_dy[this->num_y]);
+                this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
+                this->solution_ref.push_back(new_solution_dy[this->num_y + 2]);
+                this->solution_ref.push_back(new_solution_dy[this->num_y + 3]);
+                this->solution_ref.push_back(new_solution_dy[this->num_y + 4]);
+                this->solution_ref.push_back(new_solution_dy[this->num_y + 5]);
+                break;
+            default:
+                this->solution_ref.insert(this->solution_ref.end(), new_solution_dy[this->num_y], new_solution_dy[this->num_y] + this->num_extra);
         }
     }
 }

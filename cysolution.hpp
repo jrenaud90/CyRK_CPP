@@ -18,6 +18,7 @@ protected:
     // Metadata
     size_t num_y = 0;
     size_t num_dy = 0;
+    size_t num_extra = 0;
     double num_dy_dbl = 0.0;
 
     // Current storage information
@@ -26,7 +27,8 @@ protected:
 
     // Storage for arrays
     std::vector<double> time_domain;
-    std::vector<double> solution; 
+    std::vector<double> solution;
+    bool capture_extra = false;
 
 public:
     // Status information
@@ -54,7 +56,7 @@ protected:
 
 public:
     CySolverResult();
-    CySolverResult(size_t num_y, size_t num_dy, size_t expected_size);
+    CySolverResult(size_t num_y, size_t num_extra, size_t expected_size);
     ~CySolverResult();
     void save_data(double new_t, double* new_solution_y, double* new_solution_dy);
     void reset();

@@ -1,6 +1,12 @@
+#pragma once
+
+#include <memory>
+
+#include "rk.hpp"
 #include "cysolver.hpp"
 
-CySolverResult* solve_ivp(
+
+std::shared_ptr<CySolverResult> solve_ivp(
     DiffeqFuncType diffeq_ptr,
     double* t_span_ptr,
     double* y0_ptr,

@@ -135,6 +135,7 @@ const int DOP853_order = 8;
 const size_t DOP853_n_stages = 12;
 const size_t DOP853_A_rows = 12;
 const size_t DOP853_A_cols = 12;
+const size_t DOP853_len_C = 12;
 const int DOP853_error_estimator_order = 7;
 const double DOP853_error_exponent = 1.0 / (7.0 + 1.0);  // Defined as 1 / (error_order + 1)
 

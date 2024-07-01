@@ -24,3 +24,19 @@ def diff_plot(t, y, fig_name=None):
       
       
 diff_plot(data[0, :], data[1:, :])
+
+print('C Shape:', data.shape)
+
+def func(t, y):
+    return [(1. - 0.01 * y[1]) * y[0], (0.02 * y[0] - 1.) * y[1]]
+t_span = (0.0, 500.0)
+y0 = (20.0, 20.0)
+rtol = 1.0e-7
+atol = 1.0e-8
+
+from scipy.integrate import solve_ivp
+
+solution = solve_ivp(func, t_span, y0, method='DOP853', rtol=rtol, atol=atol)
+
+print('Solve IVP Shape', solution.y.shape)
+diff_plot(solution.t, solution.y)

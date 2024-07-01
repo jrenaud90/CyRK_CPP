@@ -158,8 +158,10 @@ void CySolverResult::save_data(double new_t, double* new_solution_y, double* new
             this->solution_ref.push_back(new_solution_y[3]);
             this->solution_ref.push_back(new_solution_y[4]);
             this->solution_ref.push_back(new_solution_y[5]);
+            break;
         default:
             this->solution_ref.insert(this->solution_ref.end(), new_solution_y, new_solution_y + this->num_y);
+            break;
     }
 
     // Repeak for any extra information that is captured.
@@ -173,29 +175,29 @@ void CySolverResult::save_data(double new_t, double* new_solution_y, double* new
                 this->solution_ref.push_back(new_solution_dy[this->num_y]);
                 break;
             case 2:
-                this->solution_ref.push_back(new_solution_dy[this->num_y]);
+                this->solution_ref.push_back(new_solution_dy[this->num_y    ]);
                 this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
                 break;
             case 3:
-                this->solution_ref.push_back(new_solution_dy[this->num_y]);
+                this->solution_ref.push_back(new_solution_dy[this->num_y    ]);
                 this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
                 this->solution_ref.push_back(new_solution_dy[this->num_y + 2]);
                 break;
             case 4:
-                this->solution_ref.push_back(new_solution_dy[this->num_y]);
+                this->solution_ref.push_back(new_solution_dy[this->num_y    ]);
                 this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
                 this->solution_ref.push_back(new_solution_dy[this->num_y + 2]);
                 this->solution_ref.push_back(new_solution_dy[this->num_y + 3]);
                 break;
             case 5:
-                this->solution_ref.push_back(new_solution_dy[this->num_y]);
+                this->solution_ref.push_back(new_solution_dy[this->num_y    ]);
                 this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
                 this->solution_ref.push_back(new_solution_dy[this->num_y + 2]);
                 this->solution_ref.push_back(new_solution_dy[this->num_y + 3]);
                 this->solution_ref.push_back(new_solution_dy[this->num_y + 4]);
                 break;
             case 6:
-                this->solution_ref.push_back(new_solution_dy[this->num_y]);
+                this->solution_ref.push_back(new_solution_dy[this->num_y    ]);
                 this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
                 this->solution_ref.push_back(new_solution_dy[this->num_y + 2]);
                 this->solution_ref.push_back(new_solution_dy[this->num_y + 3]);
@@ -204,6 +206,7 @@ void CySolverResult::save_data(double new_t, double* new_solution_y, double* new
                 break;
             default:
                 this->solution_ref.insert(this->solution_ref.end(), new_solution_dy[this->num_y], new_solution_dy[this->num_y] + this->num_extra);
+                break;
         }
     }
 }

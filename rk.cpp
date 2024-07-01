@@ -135,35 +135,37 @@ void RKSolver::p_estimate_error()
 
         switch (this->n_stages)
         {
-            // These loops go 1 more than `n_stages`.
-            case(3):
-                // RK23
-                error_dot =  this->E_ptr[0] * this->K_ptr[y_i];
-                error_dot += this->E_ptr[1] * this->K_ptr[this->num_y + y_i];
-                error_dot += this->E_ptr[2] * this->K_ptr[2 * this->num_y + y_i];
-                error_dot += this->E_ptr[3] * this->K_ptr[3 * this->num_y + y_i];
+        // These loops go 1 more than `n_stages`.
+        // Note: DOP853 is handled in an override by its subclass.
+        case(3):
+            // RK23
+            error_dot =  this->E_ptr[0] * this->K_ptr[                  y_i];
+            error_dot += this->E_ptr[1] * this->K_ptr[    this->num_y + y_i];
+            error_dot += this->E_ptr[2] * this->K_ptr[2 * this->num_y + y_i];
+            error_dot += this->E_ptr[3] * this->K_ptr[3 * this->num_y + y_i];
 
-                break;
-            case(6):
-                // RK45
-                error_dot =  this->E_ptr[0] * this->K_ptr[y_i];
-                error_dot += this->E_ptr[1] * this->K_ptr[this->num_y + y_i];
-                error_dot += this->E_ptr[2] * this->K_ptr[2 * this->num_y + y_i];
-                error_dot += this->E_ptr[3] * this->K_ptr[3 * this->num_y + y_i];
-                error_dot += this->E_ptr[4] * this->K_ptr[4 * this->num_y + y_i];
-                error_dot += this->E_ptr[5] * this->K_ptr[5 * this->num_y + y_i];
-                error_dot += this->E_ptr[6] * this->K_ptr[6 * this->num_y + y_i];
+            break;
+        case(6):
+            // RK45
+            error_dot =  this->E_ptr[0] * this->K_ptr[                  y_i];
+            error_dot += this->E_ptr[1] * this->K_ptr[    this->num_y + y_i];
+            error_dot += this->E_ptr[2] * this->K_ptr[2 * this->num_y + y_i];
+            error_dot += this->E_ptr[3] * this->K_ptr[3 * this->num_y + y_i];
+            error_dot += this->E_ptr[4] * this->K_ptr[4 * this->num_y + y_i];
+            error_dot += this->E_ptr[5] * this->K_ptr[5 * this->num_y + y_i];
+            error_dot += this->E_ptr[6] * this->K_ptr[6 * this->num_y + y_i];
 
-                break;
+            break;
 
-            default:
-                // Initialize
-                error_dot = 0.0;
-                // New or Non-optimized RK method. default to for loop.
-                for (size_t j = 0; j < (this->n_stages + 1); j++) {
-                    error_dot += this->K_ptr[j * this->num_y + y_i] * this->E_ptr[j];
-                }
-                break;
+        default:
+            // Resort to unrolled loops
+            // Initialize
+            error_dot = 0.0;
+            // New or Non-optimized RK method. default to for loop.
+            for (size_t j = 0; j < (this->n_stages + 1); j++) {
+                error_dot += this->K_ptr[j * this->num_y + y_i] * this->E_ptr[j];
+            }
+            break;
         }
 
         // We need the absolute value but since we are taking the square, it is guaranteed to be positive.
@@ -276,7 +278,7 @@ void RKSolver::p_step_implementation()
                 {   
                     // Loop through (j = 0; j < s; j++)
                     // j = 0
-                    temp_double = this->A_ptr[stride_3] * this->K_ptr[y_i];
+                    temp_double  = this->A_ptr[stride_3]     * this->K_ptr[              y_i];
                     // j = 1
                     temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[this->num_y + y_i];
 
@@ -289,9 +291,9 @@ void RKSolver::p_step_implementation()
                 {
                     // Loop through (j = 0; j < s; j++)
                     // j = 0
-                    temp_double = this->A_ptr[stride_3] * this->K_ptr[y_i];
+                    temp_double  = this->A_ptr[stride_3]     * this->K_ptr[                  y_i];
                     // j = 1
-                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[    this->num_y + y_i];
                     // j = 2
                     temp_double += this->A_ptr[stride_3 + 2] * this->K_ptr[2 * this->num_y + y_i];
 
@@ -304,9 +306,9 @@ void RKSolver::p_step_implementation()
                 {
                     // Loop through (j = 0; j < s; j++)
                     // j = 0
-                    temp_double = this->A_ptr[stride_3] * this->K_ptr[y_i];
+                    temp_double  = this->A_ptr[stride_3]     * this->K_ptr[                  y_i];
                     // j = 1
-                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[    this->num_y + y_i];
                     // j = 2
                     temp_double += this->A_ptr[stride_3 + 2] * this->K_ptr[2 * this->num_y + y_i];
                     // j = 3
@@ -321,9 +323,9 @@ void RKSolver::p_step_implementation()
                 {
                     // Loop through (j = 0; j < s; j++)
                     // j = 0
-                    temp_double = this->A_ptr[stride_3] * this->K_ptr[y_i];
+                    temp_double  = this->A_ptr[stride_3]     * this->K_ptr[                  y_i];
                     // j = 1
-                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[    this->num_y + y_i];
                     // j = 2
                     temp_double += this->A_ptr[stride_3 + 2] * this->K_ptr[2 * this->num_y + y_i];
                     // j = 3
@@ -340,9 +342,9 @@ void RKSolver::p_step_implementation()
                 {
                     // Loop through (j = 0; j < s; j++)
                     // j = 0
-                    temp_double = this->A_ptr[stride_3] * this->K_ptr[y_i];
+                    temp_double  = this->A_ptr[stride_3]     * this->K_ptr[                  y_i];
                     // j = 1
-                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[    this->num_y + y_i];
                     // j = 2
                     temp_double += this->A_ptr[stride_3 + 2] * this->K_ptr[2 * this->num_y + y_i];
                     // j = 3
@@ -361,9 +363,9 @@ void RKSolver::p_step_implementation()
                 {
                     // Loop through (j = 0; j < s; j++)
                     // j = 0
-                    temp_double = this->A_ptr[stride_3] * this->K_ptr[y_i];
+                    temp_double  = this->A_ptr[stride_3]     * this->K_ptr[                  y_i];
                     // j = 1
-                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[    this->num_y + y_i];
                     // j = 2
                     temp_double += this->A_ptr[stride_3 + 2] * this->K_ptr[2 * this->num_y + y_i];
                     // j = 3
@@ -384,9 +386,9 @@ void RKSolver::p_step_implementation()
                 {
                     // Loop through (j = 0; j < s; j++)
                     // j = 0
-                    temp_double = this->A_ptr[stride_3] * this->K_ptr[y_i];
+                    temp_double  = this->A_ptr[stride_3]     * this->K_ptr[                  y_i];
                     // j = 1
-                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[    this->num_y + y_i];
                     // j = 2
                     temp_double += this->A_ptr[stride_3 + 2] * this->K_ptr[2 * this->num_y + y_i];
                     // j = 3
@@ -409,9 +411,9 @@ void RKSolver::p_step_implementation()
                 {
                     // Loop through (j = 0; j < s; j++)
                     // j = 0
-                    temp_double = this->A_ptr[stride_3] * this->K_ptr[y_i];
+                    temp_double  = this->A_ptr[stride_3]     * this->K_ptr[                  y_i];
                     // j = 1
-                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[    this->num_y + y_i];
                     // j = 2
                     temp_double += this->A_ptr[stride_3 + 2] * this->K_ptr[2 * this->num_y + y_i];
                     // j = 3
@@ -436,9 +438,9 @@ void RKSolver::p_step_implementation()
                 {
                     // Loop through (j = 0; j < s; j++)
                     // j = 0
-                    temp_double = this->A_ptr[stride_3] * this->K_ptr[y_i];
+                    temp_double  = this->A_ptr[stride_3]     * this->K_ptr[                  y_i];
                     // j = 1
-                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[    this->num_y + y_i];
                     // j = 2
                     temp_double += this->A_ptr[stride_3 + 2] * this->K_ptr[2 * this->num_y + y_i];
                     // j = 3
@@ -465,25 +467,25 @@ void RKSolver::p_step_implementation()
                 {
                     // Loop through (j = 0; j < s; j++)
                     // j = 0
-                    temp_double = this->A_ptr[stride_3] * this->K_ptr[y_i];
+                    temp_double  = this->A_ptr[stride_3]      * this->K_ptr[                   y_i];
                     // j = 1
-                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_3 + 1]  * this->K_ptr[     this->num_y + y_i];
                     // j = 2
-                    temp_double += this->A_ptr[stride_3 + 2] * this->K_ptr[2 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_3 + 2]  * this->K_ptr[2  * this->num_y + y_i];
                     // j = 3
-                    temp_double += this->A_ptr[stride_3 + 3] * this->K_ptr[3 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_3 + 3]  * this->K_ptr[3  * this->num_y + y_i];
                     // j = 4
-                    temp_double += this->A_ptr[stride_3 + 4] * this->K_ptr[4 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_3 + 4]  * this->K_ptr[4  * this->num_y + y_i];
                     // j = 5
-                    temp_double += this->A_ptr[stride_3 + 5] * this->K_ptr[5 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_3 + 5]  * this->K_ptr[5  * this->num_y + y_i];
                     // j = 6
-                    temp_double += this->A_ptr[stride_3 + 6] * this->K_ptr[6 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_3 + 6]  * this->K_ptr[6  * this->num_y + y_i];
                     // j = 7
-                    temp_double += this->A_ptr[stride_3 + 7] * this->K_ptr[7 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_3 + 7]  * this->K_ptr[7  * this->num_y + y_i];
                     // j = 8
-                    temp_double += this->A_ptr[stride_3 + 8] * this->K_ptr[8 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_3 + 8]  * this->K_ptr[8  * this->num_y + y_i];
                     // j = 9
-                    temp_double += this->A_ptr[stride_3 + 9] * this->K_ptr[9 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_3 + 9]  * this->K_ptr[9  * this->num_y + y_i];
                     // j = 10
                     temp_double += this->A_ptr[stride_3 + 10] * this->K_ptr[10 * this->num_y + y_i];
 
@@ -493,6 +495,7 @@ void RKSolver::p_step_implementation()
                 break;
 
             default:
+                // Resort to unrolled loops
                 for (size_t j = 0; j < s; j++)
                 {
                     temp_double = this->A_ptr[stride_3 + j] * this->step;
@@ -527,8 +530,8 @@ void RKSolver::p_step_implementation()
             // RK23
             for (size_t y_i = 0; y_i < this->num_y; y_i++)
             {
-                temp_double =  this->B_ptr[0] * this->K_ptr[y_i];
-                temp_double += this->B_ptr[1] * this->K_ptr[this->num_y + y_i];
+                temp_double =  this->B_ptr[0] * this->K_ptr[                  y_i];
+                temp_double += this->B_ptr[1] * this->K_ptr[    this->num_y + y_i];
                 temp_double += this->B_ptr[2] * this->K_ptr[2 * this->num_y + y_i];
                 this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + (this->step * temp_double);
             }
@@ -537,8 +540,8 @@ void RKSolver::p_step_implementation()
             //RK45
             for (size_t y_i = 0; y_i < this->num_y; y_i++)
             {
-                temp_double =  this->B_ptr[0] * this->K_ptr[y_i];
-                temp_double += this->B_ptr[1] * this->K_ptr[this->num_y + y_i];
+                temp_double =  this->B_ptr[0] * this->K_ptr[                  y_i];
+                temp_double += this->B_ptr[1] * this->K_ptr[    this->num_y + y_i];
                 temp_double += this->B_ptr[2] * this->K_ptr[2 * this->num_y + y_i];
                 temp_double += this->B_ptr[3] * this->K_ptr[3 * this->num_y + y_i];
                 temp_double += this->B_ptr[4] * this->K_ptr[4 * this->num_y + y_i];
@@ -546,7 +549,27 @@ void RKSolver::p_step_implementation()
                 this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + (this->step * temp_double);
             }
             break;
+        case(12):
+            //DOP853
+            for (size_t y_i = 0; y_i < this->num_y; y_i++)
+            {
+                temp_double = this->B_ptr[0]   * this->K_ptr[                   y_i];
+                temp_double += this->B_ptr[1]  * this->K_ptr[     this->num_y + y_i];
+                temp_double += this->B_ptr[2]  * this->K_ptr[2  * this->num_y + y_i];
+                temp_double += this->B_ptr[3]  * this->K_ptr[3  * this->num_y + y_i];
+                temp_double += this->B_ptr[4]  * this->K_ptr[4  * this->num_y + y_i];
+                temp_double += this->B_ptr[5]  * this->K_ptr[5  * this->num_y + y_i];
+                temp_double += this->B_ptr[6]  * this->K_ptr[6  * this->num_y + y_i];
+                temp_double += this->B_ptr[7]  * this->K_ptr[7  * this->num_y + y_i];
+                temp_double += this->B_ptr[8]  * this->K_ptr[8  * this->num_y + y_i];
+                temp_double += this->B_ptr[9]  * this->K_ptr[9  * this->num_y + y_i];
+                temp_double += this->B_ptr[10] * this->K_ptr[10 * this->num_y + y_i];
+                temp_double += this->B_ptr[11] * this->K_ptr[11 * this->num_y + y_i];
+                this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + (this->step * temp_double);
+            }
+            break;
         default:
+            // Resort to unrolled loops
             for (size_t j = 0; j < this->n_stages; j++) {
                 temp_double = this->B_ptr[j] * this->step;
                 stride_1 = j * this->num_y;
@@ -757,52 +780,194 @@ void RKSolver::calc_first_step_size()
 
 
 // ########################################################################################################################
-// Runge - Kutta 2(3)
+// Explicit Runge - Kutta 2(3)
 // ########################################################################################################################
 void RK23::reset()
 {
     // Setup RK constants before calling the base class reset
-    this->C_ptr = &RK23_C[0];
-    this->A_ptr = &RK23_A[0];
-    this->B_ptr = &RK23_B[0];
-    this->E_ptr = &RK23_E[0];
-    this->E3_ptr = nullptr;  // Not used for RK23
-    this->E5_ptr = nullptr;  // Not used for RK23
-    this->P_ptr = nullptr;  // TODO: Not implemented
-    this->D_ptr = nullptr;  // TODO: Not implemented
-    this->K_ptr = &this->K[0];
-    this->order = RK23_order;
+    this->C_ptr     = &RK23_C[0];
+    this->A_ptr     = &RK23_A[0];
+    this->B_ptr     = &RK23_B[0];
+    this->E_ptr     = &RK23_E[0];
+    this->E3_ptr    = nullptr;       // Not used for RK23
+    this->E5_ptr    = nullptr;       // Not used for RK23
+    this->P_ptr     = nullptr;       // TODO: Not implemented
+    this->D_ptr     = nullptr;       // TODO: Not implemented
+    this->K_ptr     = &this->K[0];
+    this->order     = RK23_order;
+    this->n_stages  = RK23_n_stages;
+    this->len_Acols = RK23_len_Acols;
+    this->len_C     = RK23_len_C;
     this->error_estimator_order = RK23_error_estimator_order;
     this->error_exponent = RK23_error_exponent;
-    this->n_stages = RK23_n_stages;
-    this->len_Acols = RK23_len_Acols;
-    this->len_C = RK23_len_C;
 
     RKSolver::reset();
 }
 
 
 // ########################################################################################################################
-// Runge - Kutta 4(5)
+// Explicit Runge - Kutta 4(5)
 // ########################################################################################################################
 void RK45::reset()
 {
     // Setup RK constants before calling the base class reset
-    this->C_ptr = &RK45_C[0];
-    this->A_ptr = &RK45_A[0];
-    this->B_ptr = &RK45_B[0];
-    this->E_ptr = &RK45_E[0];
-    this->E3_ptr = nullptr;  // Not used for RK23
-    this->E5_ptr = nullptr;  // Not used for RK23
-    this->P_ptr = nullptr;  // TODO: Not implemented
-    this->D_ptr = nullptr;  // TODO: Not implemented
-    this->K_ptr = &this->K[0];
-    this->order = RK45_order;
+    this->C_ptr     = &RK45_C[0];
+    this->A_ptr     = &RK45_A[0];
+    this->B_ptr     = &RK45_B[0];
+    this->E_ptr     = &RK45_E[0];
+    this->E3_ptr    = nullptr;       // Not used for RK23
+    this->E5_ptr    = nullptr;       // Not used for RK23
+    this->P_ptr     = nullptr;       // TODO: Not implemented
+    this->D_ptr     = nullptr;       // TODO: Not implemented
+    this->K_ptr     = &this->K[0];
+    this->order     = RK45_order;
+    this->n_stages  = RK45_n_stages;
+    this->len_Acols = RK45_len_Acols;
+    this->len_C     = RK45_len_C;
     this->error_estimator_order = RK45_error_estimator_order;
     this->error_exponent = RK45_error_exponent;
-    this->n_stages = RK45_n_stages;
-    this->len_Acols = RK45_len_Acols;
-    this->len_C = RK45_len_C;
+
 
     RKSolver::reset();
+}
+
+
+// ########################################################################################################################
+// Explicit Runge-Kutta Method of order 8(5,3) due Dormand & Prince
+// ########################################################################################################################
+void DOP853::reset()
+{
+    // Setup RK constants before calling the base class reset
+    this->C_ptr     = &DOP853_C[0];
+    this->A_ptr     = &DOP853_A[0];
+    this->B_ptr     = &DOP853_B[0];
+    this->E_ptr     = nullptr;        // Not used for RK23
+    this->E3_ptr    = &DOP853_E3[0];
+    this->E5_ptr    = &DOP853_E5[0];
+    this->P_ptr     = nullptr;        // TODO: Not implemented
+    this->D_ptr     = nullptr;        // TODO: Not implemented
+    this->K_ptr     = &this->K[0];
+    this->order     = DOP853_order;
+    this->n_stages  = DOP853_n_stages;
+    this->len_Acols = DOP853_A_cols;
+    this->len_C     = DOP853_len_C;
+    this->error_estimator_order = DOP853_error_estimator_order;
+    this->error_exponent = DOP853_error_exponent;
+
+    RKSolver::reset();
+}
+
+
+void DOP853::p_estimate_error()
+{
+    double temp_double, error_denom, error_dot3, error_dot5, scale;
+    double error_norm3 = 0.0;
+    double error_norm5 = 0.0;
+
+    // Initialize rtol and atol
+    double rtol = this->rtols_ptr[0];
+    double atol = this->atols_ptr[0];
+
+    for (size_t y_i = 0; y_i < this->num_y; y_i++)
+    {
+        if (this->use_array_rtols)
+        {
+            rtol = this->rtols_ptr[y_i];
+        }
+
+        if (this->use_array_atols)
+        {
+            atol = this->atols_ptr[y_i];
+        }
+
+        // Find scale of y for error calculations
+        scale = atol + std::fmax(std::fabs(this->y_old_ptr[y_i]), std::fabs(this->y_now_ptr[y_i])) * rtol;
+        scale = 1.0 / scale;
+
+        // Set last array of K equal to dydt
+        this->K_ptr[this->nstages_numy + y_i] = this->dy_now_ptr[y_i];
+
+        // Dot product between K and E3 & E5 (sum over n_stages + 1; for DOP853 n_stages = 12
+        // n = 0
+        temp_double = this->K_ptr[                  y_i];
+        error_dot3  = this->E3_ptr[0] * temp_double;
+        error_dot5  = this->E5_ptr[0] * temp_double;
+
+        // n = 1
+        temp_double  = this->K_ptr[   this->num_y + y_i];
+        error_dot3  += this->E3_ptr[1] * temp_double;
+        error_dot5  += this->E5_ptr[1] * temp_double;
+
+        // n = 2
+        temp_double = this->K_ptr[2 * this->num_y + y_i];
+        error_dot3 += this->E3_ptr[2] * temp_double;
+        error_dot5 += this->E5_ptr[2] * temp_double;
+
+        // n = 3
+        temp_double = this->K_ptr[3 * this->num_y + y_i];
+        error_dot3 += this->E3_ptr[3] * temp_double;
+        error_dot5 += this->E5_ptr[3] * temp_double;
+
+        // n = 4
+        temp_double = this->K_ptr[4 * this->num_y + y_i];
+        error_dot3 += this->E3_ptr[4] * temp_double;
+        error_dot5 += this->E5_ptr[4] * temp_double;
+
+        // n = 5
+        temp_double = this->K_ptr[5 * this->num_y + y_i];
+        error_dot3 += this->E3_ptr[5] * temp_double;
+        error_dot5 += this->E5_ptr[5] * temp_double;
+
+        // n = 6
+        temp_double = this->K_ptr[6 * this->num_y + y_i];
+        error_dot3 += this->E3_ptr[6] * temp_double;
+        error_dot5 += this->E5_ptr[6] * temp_double;
+
+        // n = 7
+        temp_double = this->K_ptr[7 * this->num_y + y_i];
+        error_dot3 += this->E3_ptr[7] * temp_double;
+        error_dot5 += this->E5_ptr[7] * temp_double;
+
+        // n = 8
+        temp_double = this->K_ptr[8 * this->num_y + y_i];
+        error_dot3 += this->E3_ptr[8] * temp_double;
+        error_dot5 += this->E5_ptr[8] * temp_double;
+
+        // n = 9
+        temp_double = this->K_ptr[9 * this->num_y + y_i];
+        error_dot3 += this->E3_ptr[9] * temp_double;
+        error_dot5 += this->E5_ptr[9] * temp_double;
+
+        // n = 10
+        temp_double = this->K_ptr[10 * this->num_y + y_i];
+        error_dot3 += this->E3_ptr[10] * temp_double;
+        error_dot5 += this->E5_ptr[10] * temp_double;
+
+        // n = 11
+        temp_double = this->K_ptr[11 * this->num_y + y_i];
+        error_dot3 += this->E3_ptr[11] * temp_double;
+        error_dot5 += this->E5_ptr[11] * temp_double;
+
+        // n = 12
+        temp_double = this->K_ptr[12 * this->num_y + y_i];
+        error_dot3 += this->E3_ptr[12] * temp_double;
+        error_dot5 += this->E5_ptr[12] * temp_double;
+
+        // We need the absolute value but since we are taking the square, it is guaranteed to be positive.
+        // TODO: This will need to change if CySolver ever accepts complex numbers
+        // error_norm_abs = fabs(error_dot_1)
+        error_dot3 *= scale;
+        error_dot5 *= scale;
+
+        error_norm3 += (error_dot3 * error_dot3);
+        error_norm5 += (error_dot5 * error_dot5);
+    }
+    // Check if errors are zero
+    if ((error_norm5 == 0.0) && (error_norm3) == 0.0) {
+        this->error_norm = 0.0;
+    }
+    else {
+        error_denom = error_norm5 + 0.01 * error_norm3;
+        this->error_norm = this->step_size * error_norm5 / std::sqrt(error_denom * this->num_y_dbl);
+    }
 }

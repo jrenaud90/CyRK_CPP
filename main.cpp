@@ -21,7 +21,7 @@ int main(){
 
     double time_span[2] = {0.0, 500.0};
     double* time_span_ptr = &time_span[0];
-    int method = 1;
+    int method = 2;
     int max_i = 1000;
     
     double y0[2] = {20.0, 20.0};
@@ -86,9 +86,9 @@ int main(){
         //break;
     }
 
-    std::cout << "Done! Final Avg: " << total_runner / 20 << std::endl;
+    std::cout << "Done! Final Avg: " << total_runner / 20 << std::endl << "Saving data..." << std::endl;
 
-    /*
+    
     std::ofstream datastream;
 
     datastream.open("out.dat");
@@ -100,10 +100,10 @@ int main(){
 
     for (size_t i = 0; i < final_size; i++)
     {
-        datastream << result->time_domain_ptr[0][i] << ", " << result->solution_ptr[0][2 * i] << ", " << result->solution_ptr[0][2 * i + 1] << std::endl;
+        datastream << result->time_domain_ref[i] << ", " << result->solution_ref[2 * i] << ", " << result->solution_ref[2 * i + 1] << std::endl;
     }
     datastream.close();
-    std::cout << "Data saved." << std::endl;*/
+    std::cout << "Data saved." << std::endl;
 
     //std::cin.get();
 

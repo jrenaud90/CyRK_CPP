@@ -478,3 +478,15 @@ public:
     using RKSolver::RKSolver;
     virtual void reset() override;
 };
+
+class DOP853 : public RKSolver {
+
+protected:
+    double K[13 * 25] = { 0.0 };
+
+public:
+    // Copy over base class constructors
+    using RKSolver::RKSolver;
+    virtual void reset() override;
+    virtual void p_estimate_error() override;
+};

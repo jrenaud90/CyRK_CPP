@@ -384,6 +384,7 @@ protected:
     int error_estimator_order = 0;
     double error_exponent = 0.0;
     size_t n_stages = 0;
+    size_t n_stages_p1 = 0;
     size_t len_Acols = 0;
     size_t len_C = 0;
     size_t nstages_numy = 0;

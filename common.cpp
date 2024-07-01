@@ -21,7 +21,7 @@ void find_max_num_steps(
     else {
         max_num_steps_ram_dbl /= (sizeof(double) * (1.0 + num_y));
     }
-    size_t max_num_steps_ram = std::floor(max_num_steps_ram_dbl);
+    size_t max_num_steps_ram = (size_t)std::floor(max_num_steps_ram_dbl);
 
     // Parse user-provided max number of steps
     user_provided_max_num_steps[0] = false;
@@ -72,7 +72,7 @@ size_t find_expected_size(
 
     }
     temp_expected_size = fmin(temp_expected_size, max_expected);
-    size_t expected_size_to_use = std::floor(temp_expected_size);
+    size_t expected_size_to_use = (size_t)std::floor(temp_expected_size);
     
     return expected_size_to_use;
 }

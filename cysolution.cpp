@@ -10,9 +10,9 @@ CySolverResult::CySolverResult(size_t num_y, size_t num_extra, size_t expected_s
     // Pull out known information
     this->num_y = num_y;
     // num_dy will be larger than num_y if the user wishes to capture extra output during integration.
-    this->num_extra = num_extra;
-    this->num_dy = this->num_y + this->num_extra;
-    this->num_dy_dbl = this->num_dy;
+    this->num_extra  = num_extra;
+    this->num_dy     = this->num_y + this->num_extra;
+    this->num_dy_dbl = (double)this->num_dy;
 
     if (num_extra > 0)
     {
@@ -52,7 +52,7 @@ void CySolverResult::p_expand_storage()
     }
     else
     {
-        this->storage_capacity = new_storage_size_dbl;
+        this->storage_capacity = (size_t)new_storage_size_dbl;
 
         // Round to the nearest power of 2.
         this->storage_capacity--;
@@ -165,49 +165,47 @@ void CySolverResult::save_data(double new_t, double* new_solution_y, double* new
     }
 
     // Repeak for any extra information that is captured.
-    if (this->capture_extra)
+    switch (this->num_extra)
     {
-        switch (this->num_extra)
-        {
-            case 0:
-                break;
-            case 1:
-                this->solution_ref.push_back(new_solution_dy[this->num_y]);
-                break;
-            case 2:
-                this->solution_ref.push_back(new_solution_dy[this->num_y    ]);
-                this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
-                break;
-            case 3:
-                this->solution_ref.push_back(new_solution_dy[this->num_y    ]);
-                this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
-                this->solution_ref.push_back(new_solution_dy[this->num_y + 2]);
-                break;
-            case 4:
-                this->solution_ref.push_back(new_solution_dy[this->num_y    ]);
-                this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
-                this->solution_ref.push_back(new_solution_dy[this->num_y + 2]);
-                this->solution_ref.push_back(new_solution_dy[this->num_y + 3]);
-                break;
-            case 5:
-                this->solution_ref.push_back(new_solution_dy[this->num_y    ]);
-                this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
-                this->solution_ref.push_back(new_solution_dy[this->num_y + 2]);
-                this->solution_ref.push_back(new_solution_dy[this->num_y + 3]);
-                this->solution_ref.push_back(new_solution_dy[this->num_y + 4]);
-                break;
-            case 6:
-                this->solution_ref.push_back(new_solution_dy[this->num_y    ]);
-                this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
-                this->solution_ref.push_back(new_solution_dy[this->num_y + 2]);
-                this->solution_ref.push_back(new_solution_dy[this->num_y + 3]);
-                this->solution_ref.push_back(new_solution_dy[this->num_y + 4]);
-                this->solution_ref.push_back(new_solution_dy[this->num_y + 5]);
-                break;
-            default:
-                this->solution_ref.insert(this->solution_ref.end(), new_solution_dy[this->num_y], new_solution_dy[this->num_y] + this->num_extra);
-                break;
-        }
+        case 0:
+            // Not capturing extra. do nothing.
+            break;
+        case 1:
+            this->solution_ref.push_back(new_solution_dy[this->num_y]);
+            break;
+        case 2:
+            this->solution_ref.push_back(new_solution_dy[this->num_y    ]);
+            this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
+            break;
+        case 3:
+            this->solution_ref.push_back(new_solution_dy[this->num_y    ]);
+            this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
+            this->solution_ref.push_back(new_solution_dy[this->num_y + 2]);
+            break;
+        case 4:
+            this->solution_ref.push_back(new_solution_dy[this->num_y    ]);
+            this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
+            this->solution_ref.push_back(new_solution_dy[this->num_y + 2]);
+            this->solution_ref.push_back(new_solution_dy[this->num_y + 3]);
+            break;
+        case 5:
+            this->solution_ref.push_back(new_solution_dy[this->num_y    ]);
+            this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
+            this->solution_ref.push_back(new_solution_dy[this->num_y + 2]);
+            this->solution_ref.push_back(new_solution_dy[this->num_y + 3]);
+            this->solution_ref.push_back(new_solution_dy[this->num_y + 4]);
+            break;
+        case 6:
+            this->solution_ref.push_back(new_solution_dy[this->num_y    ]);
+            this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
+            this->solution_ref.push_back(new_solution_dy[this->num_y + 2]);
+            this->solution_ref.push_back(new_solution_dy[this->num_y + 3]);
+            this->solution_ref.push_back(new_solution_dy[this->num_y + 4]);
+            this->solution_ref.push_back(new_solution_dy[this->num_y + 5]);
+            break;
+        default:
+            this->solution_ref.insert(this->solution_ref.end(), new_solution_dy[this->num_y], new_solution_dy[this->num_y] + this->num_extra);
+            break;
     }
 }
 

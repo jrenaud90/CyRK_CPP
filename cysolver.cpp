@@ -66,10 +66,10 @@ CySolverBase::CySolverBase(
     this->num_extra = num_extra;
 
     // Parse y values
-    this->num_y = num_y;
-    this->num_y_dbl = this->num_y;
+    this->num_y      = num_y;
+    this->num_y_dbl  = (double)this->num_y;
     this->num_y_sqrt = std::sqrt(this->num_y_dbl);
-    this->num_dy = this->num_y + this->num_extra;
+    this->num_dy     = this->num_y + this->num_extra;
     // Make a copy of y0
     for (size_t y_i = 0; y_i < this->num_y; y_i++)
     {

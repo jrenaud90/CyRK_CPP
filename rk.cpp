@@ -103,7 +103,7 @@ RKSolver::~RKSolver()
 void RKSolver::p_estimate_error()
 {
 
-    size_t stride;
+    size_t stride_K;
     double error_dot, scale;
 
     // Initialize rtol and atol
@@ -128,8 +128,10 @@ void RKSolver::p_estimate_error()
         scale = atol + std::fmax(std::fabs(this->y_old_ptr[y_i]), std::fabs(this->y_now_ptr[y_i])) * rtol;
         scale = 1.0 / scale;
 
-        // Set last array of K equal to dydt
-        this->K_ptr[this->nstages_numy + y_i] = this->dy_now_ptr[y_i];
+        // NOTE: This step involving last column of K has nothing to do with error calculation. It was placed here to utilize the already needed y-loop for optimization.
+        // Set last column of K equal to dydt. K has size num_y * (n_stages + 1) so the last column is at n_stages
+        stride_K = y_i * this->n_stages_p1;
+        this->K_ptr[stride_K + this->n_stages] = this->dy_now_ptr[y_i];
 
         // Dot product between K and E
 
@@ -139,31 +141,30 @@ void RKSolver::p_estimate_error()
         // Note: DOP853 is handled in an override by its subclass.
         case(3):
             // RK23
-            error_dot =  this->E_ptr[0] * this->K_ptr[                  y_i];
-            error_dot += this->E_ptr[1] * this->K_ptr[    this->num_y + y_i];
-            error_dot += this->E_ptr[2] * this->K_ptr[2 * this->num_y + y_i];
-            error_dot += this->E_ptr[3] * this->K_ptr[3 * this->num_y + y_i];
+            error_dot =  this->E_ptr[0] * this->K_ptr[stride_K];
+            error_dot += this->E_ptr[1] * this->K_ptr[stride_K + 1];
+            error_dot += this->E_ptr[2] * this->K_ptr[stride_K + 2];
+            error_dot += this->E_ptr[3] * this->K_ptr[stride_K + 3];
 
             break;
         case(6):
             // RK45
-            error_dot =  this->E_ptr[0] * this->K_ptr[                  y_i];
-            error_dot += this->E_ptr[1] * this->K_ptr[    this->num_y + y_i];
-            error_dot += this->E_ptr[2] * this->K_ptr[2 * this->num_y + y_i];
-            error_dot += this->E_ptr[3] * this->K_ptr[3 * this->num_y + y_i];
-            error_dot += this->E_ptr[4] * this->K_ptr[4 * this->num_y + y_i];
-            error_dot += this->E_ptr[5] * this->K_ptr[5 * this->num_y + y_i];
-            error_dot += this->E_ptr[6] * this->K_ptr[6 * this->num_y + y_i];
+            error_dot =  this->E_ptr[0] * this->K_ptr[stride_K];
+            error_dot += this->E_ptr[1] * this->K_ptr[stride_K + 1];
+            error_dot += this->E_ptr[2] * this->K_ptr[stride_K + 2];
+            error_dot += this->E_ptr[3] * this->K_ptr[stride_K + 3];
+            error_dot += this->E_ptr[4] * this->K_ptr[stride_K + 4];
+            error_dot += this->E_ptr[5] * this->K_ptr[stride_K + 5];
+            error_dot += this->E_ptr[6] * this->K_ptr[stride_K + 6];
 
             break;
-
         default:
             // Resort to unrolled loops
             // Initialize
             error_dot = 0.0;
             // New or Non-optimized RK method. default to for loop.
             for (size_t j = 0; j < (this->n_stages + 1); j++) {
-                error_dot += this->K_ptr[j * this->num_y + y_i] * this->E_ptr[j];
+                error_dot += this->E_ptr[j] * this->K_ptr[stride_K + j];
             }
             break;
         }
@@ -182,8 +183,8 @@ void RKSolver::p_estimate_error()
 void RKSolver::p_step_implementation()
 {
     // Initialize step variables
-    size_t stride_1, stride_2, stride_3;
-    double step_factor, time_tmp, t_delta_check, temp_double, temp2_double, error_pow;
+    size_t stride_K, stride_A;
+    double step_factor, time_tmp, t_delta_check, temp_double, error_pow;
 
     // Initialize tolerances to the 0 place. If `use_array_rtols` (or atols) is set then this will change in the loop.
     double rtol = this->rtols_ptr[0];
@@ -256,259 +257,194 @@ void RKSolver::p_step_implementation()
         for (size_t s = 1; s < this->len_C; s++) {
             // Find the current time based on the old time and the step size.
             this->t_now = this->t_old + this->C_ptr[s] * this->step;
-            stride_1 = s * this->num_y;
-            stride_3 = s * this->len_Acols;
+            stride_A = s * this->len_Acols;
 
-            // Dot Product (K, a) * step
-            switch (s)
+            for (size_t y_i = 0; y_i < this->num_y; y_i++)
             {
-            case(1):
-                for (size_t y_i = 0; y_i < this->num_y; y_i++) {
+                stride_K = y_i * this->n_stages_p1;
+                // Dot Product (K, a) * step
+                switch (s)
+                {
+                case(1):
                     // Set the first column of K
                     temp_double = this->dy_old_ptr[y_i];
                     // K[0, :] == first part of the array
-                    this->K_ptr[y_i] = temp_double;
-
-                    // Calculate y_new for s==1
-                    this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + (temp_double * A_at_10 * this->step);
-                }
-                break;
-            case(2):
-                for (size_t y_i = 0; y_i < this->num_y; y_i++)
-                {   
+                    this->K_ptr[stride_K] = temp_double;
+                    temp_double *= A_at_10;
+                    break;
+                case(2):
                     // Loop through (j = 0; j < s; j++)
                     // j = 0
-                    temp_double  = this->A_ptr[stride_3]     * this->K_ptr[              y_i];
+                    temp_double = this->A_ptr[stride_A] * this->K_ptr[stride_K];
                     // j = 1
-                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[this->num_y + y_i];
-
-                    // Done. Store y * step
-                    this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + (temp_double * this->step);
-                }
-                break;
-            case(3):
-                for (size_t y_i = 0; y_i < this->num_y; y_i++)
-                {
+                    temp_double += this->A_ptr[stride_A + 1] * this->K_ptr[stride_K + 1];
+                    break;
+                case(3):
                     // Loop through (j = 0; j < s; j++)
                     // j = 0
-                    temp_double  = this->A_ptr[stride_3]     * this->K_ptr[                  y_i];
+                    temp_double = this->A_ptr[stride_A] * this->K_ptr[stride_K];
                     // j = 1
-                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[    this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 1] * this->K_ptr[stride_K + 1];
                     // j = 2
-                    temp_double += this->A_ptr[stride_3 + 2] * this->K_ptr[2 * this->num_y + y_i];
-
-                    // Done. Store y * step
-                    this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + (temp_double * this->step);
-                }
-                break;
-            case(4):
-                for (size_t y_i = 0; y_i < this->num_y; y_i++)
-                {
+                    temp_double += this->A_ptr[stride_A + 2] * this->K_ptr[stride_K + 2];
+                    break;
+                case(4):
                     // Loop through (j = 0; j < s; j++)
                     // j = 0
-                    temp_double  = this->A_ptr[stride_3]     * this->K_ptr[                  y_i];
+                    temp_double = this->A_ptr[stride_A] * this->K_ptr[stride_K];
                     // j = 1
-                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[    this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 1] * this->K_ptr[stride_K + 1];
                     // j = 2
-                    temp_double += this->A_ptr[stride_3 + 2] * this->K_ptr[2 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 2] * this->K_ptr[stride_K + 2];
                     // j = 3
-                    temp_double += this->A_ptr[stride_3 + 3] * this->K_ptr[3 * this->num_y + y_i];
-
-                    // Done. Store y * step
-                    this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + (temp_double * this->step);
-                }
-                break;
-            case(5):
-                for (size_t y_i = 0; y_i < this->num_y; y_i++)
-                {
+                    temp_double += this->A_ptr[stride_A + 3] * this->K_ptr[stride_K + 3];
+                    break;
+                case(5):
                     // Loop through (j = 0; j < s; j++)
                     // j = 0
-                    temp_double  = this->A_ptr[stride_3]     * this->K_ptr[                  y_i];
+                    temp_double = this->A_ptr[stride_A] * this->K_ptr[stride_K];
                     // j = 1
-                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[    this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 1] * this->K_ptr[stride_K + 1];
                     // j = 2
-                    temp_double += this->A_ptr[stride_3 + 2] * this->K_ptr[2 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 2] * this->K_ptr[stride_K + 2];
                     // j = 3
-                    temp_double += this->A_ptr[stride_3 + 3] * this->K_ptr[3 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 3] * this->K_ptr[stride_K + 3];
                     // j = 4
-                    temp_double += this->A_ptr[stride_3 + 4] * this->K_ptr[4 * this->num_y + y_i];
-
-                    // Done. Store y * step
-                    this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + (temp_double * this->step);
-                }
-                break;
-            case(6):
-                for (size_t y_i = 0; y_i < this->num_y; y_i++)
-                {
+                    temp_double += this->A_ptr[stride_A + 4] * this->K_ptr[stride_K + 4];
+                    break;
+                case(6):
                     // Loop through (j = 0; j < s; j++)
                     // j = 0
-                    temp_double  = this->A_ptr[stride_3]     * this->K_ptr[                  y_i];
+                    temp_double = this->A_ptr[stride_A] * this->K_ptr[stride_K];
                     // j = 1
-                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[    this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 1] * this->K_ptr[stride_K + 1];
                     // j = 2
-                    temp_double += this->A_ptr[stride_3 + 2] * this->K_ptr[2 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 2] * this->K_ptr[stride_K + 2];
                     // j = 3
-                    temp_double += this->A_ptr[stride_3 + 3] * this->K_ptr[3 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 3] * this->K_ptr[stride_K + 3];
                     // j = 4
-                    temp_double += this->A_ptr[stride_3 + 4] * this->K_ptr[4 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 4] * this->K_ptr[stride_K + 4];
                     // j = 5
-                    temp_double += this->A_ptr[stride_3 + 5] * this->K_ptr[5 * this->num_y + y_i];
-
-                    // Done. Store y * step
-                    this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + (temp_double * this->step);
-                }
-                break;
-            case(7):
-                for (size_t y_i = 0; y_i < this->num_y; y_i++)
-                {
+                    temp_double += this->A_ptr[stride_A + 5] * this->K_ptr[stride_K + 5];
+                    break;
+                case(7):
                     // Loop through (j = 0; j < s; j++)
                     // j = 0
-                    temp_double  = this->A_ptr[stride_3]     * this->K_ptr[                  y_i];
+                    temp_double = this->A_ptr[stride_A] * this->K_ptr[stride_K];
                     // j = 1
-                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[    this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 1] * this->K_ptr[stride_K + 1];
                     // j = 2
-                    temp_double += this->A_ptr[stride_3 + 2] * this->K_ptr[2 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 2] * this->K_ptr[stride_K + 2];
                     // j = 3
-                    temp_double += this->A_ptr[stride_3 + 3] * this->K_ptr[3 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 3] * this->K_ptr[stride_K + 3];
                     // j = 4
-                    temp_double += this->A_ptr[stride_3 + 4] * this->K_ptr[4 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 4] * this->K_ptr[stride_K + 4];
                     // j = 5
-                    temp_double += this->A_ptr[stride_3 + 5] * this->K_ptr[5 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 5] * this->K_ptr[stride_K + 5];
                     // j = 6
-                    temp_double += this->A_ptr[stride_3 + 6] * this->K_ptr[6 * this->num_y + y_i];
-
-                    // Done. Store y * step
-                    this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + (temp_double * this->step);
-                }
-                break;
-            case(8):
-                for (size_t y_i = 0; y_i < this->num_y; y_i++)
-                {
+                    temp_double += this->A_ptr[stride_A + 6] * this->K_ptr[stride_K + 6];
+                    break;
+                case(8):
                     // Loop through (j = 0; j < s; j++)
                     // j = 0
-                    temp_double  = this->A_ptr[stride_3]     * this->K_ptr[                  y_i];
+                    temp_double = this->A_ptr[stride_A] * this->K_ptr[stride_K];
                     // j = 1
-                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[    this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 1] * this->K_ptr[stride_K + 1];
                     // j = 2
-                    temp_double += this->A_ptr[stride_3 + 2] * this->K_ptr[2 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 2] * this->K_ptr[stride_K + 2];
                     // j = 3
-                    temp_double += this->A_ptr[stride_3 + 3] * this->K_ptr[3 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 3] * this->K_ptr[stride_K + 3];
                     // j = 4
-                    temp_double += this->A_ptr[stride_3 + 4] * this->K_ptr[4 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 4] * this->K_ptr[stride_K + 4];
                     // j = 5
-                    temp_double += this->A_ptr[stride_3 + 5] * this->K_ptr[5 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 5] * this->K_ptr[stride_K + 5];
                     // j = 6
-                    temp_double += this->A_ptr[stride_3 + 6] * this->K_ptr[6 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 6] * this->K_ptr[stride_K + 6];
                     // j = 7
-                    temp_double += this->A_ptr[stride_3 + 7] * this->K_ptr[7 * this->num_y + y_i];
-
-                    // Done. Store y * step
-                    this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + (temp_double * this->step);
-                }
-                break;
-            case(9):
-                for (size_t y_i = 0; y_i < this->num_y; y_i++)
-                {
+                    temp_double += this->A_ptr[stride_A + 7] * this->K_ptr[stride_K + 7];
+                    break;
+                case(9):
                     // Loop through (j = 0; j < s; j++)
                     // j = 0
-                    temp_double  = this->A_ptr[stride_3]     * this->K_ptr[                  y_i];
+                    temp_double = this->A_ptr[stride_A] * this->K_ptr[stride_K];
                     // j = 1
-                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[    this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 1] * this->K_ptr[stride_K + 1];
                     // j = 2
-                    temp_double += this->A_ptr[stride_3 + 2] * this->K_ptr[2 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 2] * this->K_ptr[stride_K + 2];
                     // j = 3
-                    temp_double += this->A_ptr[stride_3 + 3] * this->K_ptr[3 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 3] * this->K_ptr[stride_K + 3];
                     // j = 4
-                    temp_double += this->A_ptr[stride_3 + 4] * this->K_ptr[4 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 4] * this->K_ptr[stride_K + 4];
                     // j = 5
-                    temp_double += this->A_ptr[stride_3 + 5] * this->K_ptr[5 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 5] * this->K_ptr[stride_K + 5];
                     // j = 6
-                    temp_double += this->A_ptr[stride_3 + 6] * this->K_ptr[6 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 6] * this->K_ptr[stride_K + 6];
                     // j = 7
-                    temp_double += this->A_ptr[stride_3 + 7] * this->K_ptr[7 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 7] * this->K_ptr[stride_K + 7];
                     // j = 8
-                    temp_double += this->A_ptr[stride_3 + 8] * this->K_ptr[8 * this->num_y + y_i];
-
-                    // Done. Store y * step
-                    this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + (temp_double * this->step);
-                }
-                break;
-            case(10):
-                for (size_t y_i = 0; y_i < this->num_y; y_i++)
-                {
+                    temp_double += this->A_ptr[stride_A + 8] * this->K_ptr[stride_K + 8];
+                    break;
+                case(10):
                     // Loop through (j = 0; j < s; j++)
                     // j = 0
-                    temp_double  = this->A_ptr[stride_3]     * this->K_ptr[                  y_i];
+                    temp_double = this->A_ptr[stride_A] * this->K_ptr[stride_K];
                     // j = 1
-                    temp_double += this->A_ptr[stride_3 + 1] * this->K_ptr[    this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 1] * this->K_ptr[stride_K + 1];
                     // j = 2
-                    temp_double += this->A_ptr[stride_3 + 2] * this->K_ptr[2 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 2] * this->K_ptr[stride_K + 2];
                     // j = 3
-                    temp_double += this->A_ptr[stride_3 + 3] * this->K_ptr[3 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 3] * this->K_ptr[stride_K + 3];
                     // j = 4
-                    temp_double += this->A_ptr[stride_3 + 4] * this->K_ptr[4 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 4] * this->K_ptr[stride_K + 4];
                     // j = 5
-                    temp_double += this->A_ptr[stride_3 + 5] * this->K_ptr[5 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 5] * this->K_ptr[stride_K + 5];
                     // j = 6
-                    temp_double += this->A_ptr[stride_3 + 6] * this->K_ptr[6 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 6] * this->K_ptr[stride_K + 6];
                     // j = 7
-                    temp_double += this->A_ptr[stride_3 + 7] * this->K_ptr[7 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 7] * this->K_ptr[stride_K + 7];
                     // j = 8
-                    temp_double += this->A_ptr[stride_3 + 8] * this->K_ptr[8 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 8] * this->K_ptr[stride_K + 8];
                     // j = 9
-                    temp_double += this->A_ptr[stride_3 + 9] * this->K_ptr[9 * this->num_y + y_i];
-
-                    // Done. Store y * step
-                    this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + (temp_double * this->step);
-                }
-                break;
-            case(11):
-                for (size_t y_i = 0; y_i < this->num_y; y_i++)
-                {
+                    temp_double += this->A_ptr[stride_A + 9] * this->K_ptr[stride_K + 9];
+                    break;
+                case(11):
                     // Loop through (j = 0; j < s; j++)
                     // j = 0
-                    temp_double  = this->A_ptr[stride_3]      * this->K_ptr[                   y_i];
+                    temp_double = this->A_ptr[stride_A] * this->K_ptr[stride_K];
                     // j = 1
-                    temp_double += this->A_ptr[stride_3 + 1]  * this->K_ptr[     this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 1] * this->K_ptr[stride_K + 1];
                     // j = 2
-                    temp_double += this->A_ptr[stride_3 + 2]  * this->K_ptr[2  * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 2] * this->K_ptr[stride_K + 2];
                     // j = 3
-                    temp_double += this->A_ptr[stride_3 + 3]  * this->K_ptr[3  * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 3] * this->K_ptr[stride_K + 3];
                     // j = 4
-                    temp_double += this->A_ptr[stride_3 + 4]  * this->K_ptr[4  * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 4] * this->K_ptr[stride_K + 4];
                     // j = 5
-                    temp_double += this->A_ptr[stride_3 + 5]  * this->K_ptr[5  * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 5] * this->K_ptr[stride_K + 5];
                     // j = 6
-                    temp_double += this->A_ptr[stride_3 + 6]  * this->K_ptr[6  * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 6] * this->K_ptr[stride_K + 6];
                     // j = 7
-                    temp_double += this->A_ptr[stride_3 + 7]  * this->K_ptr[7  * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 7] * this->K_ptr[stride_K + 7];
                     // j = 8
-                    temp_double += this->A_ptr[stride_3 + 8]  * this->K_ptr[8  * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 8] * this->K_ptr[stride_K + 8];
                     // j = 9
-                    temp_double += this->A_ptr[stride_3 + 9]  * this->K_ptr[9  * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 9] * this->K_ptr[stride_K + 9];
                     // j = 10
-                    temp_double += this->A_ptr[stride_3 + 10] * this->K_ptr[10 * this->num_y + y_i];
+                    temp_double += this->A_ptr[stride_A + 10] * this->K_ptr[stride_K + 10];
+                    break;
+                default:
+                    // Resort to regular rolled loops
+                    // Initialize
+                    temp_double = 0.0;
 
-                    // Done. Store y * step
-                    this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + (temp_double * this->step);
-                }
-                break;
-
-            default:
-                // Resort to unrolled loops
-                for (size_t j = 0; j < s; j++)
-                {
-                    temp_double = this->A_ptr[stride_3 + j] * this->step;
-                    stride_2 = j * this->num_y;
-                    for (size_t y_i = 0; y_i < this->num_y; y_i++) {
-                        if (j == 0) {
-                            // Initialize
-                            this->y_now_ptr[y_i] = this->y_old_ptr[y_i];
-                        }
-                        this->y_now_ptr[y_i] += this->K_ptr[stride_2 + y_i] * temp_double;
+                    for (size_t j = 0; j < s; j++)
+                    {
+                        temp_double += this->A_ptr[stride_A + j] * this->K_ptr[stride_K + j];
                     }
+                    break;
                 }
-                break;
+                // Update value of y_now
+                this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + (this->step * temp_double);
             }
             // Call diffeq method to update K with the new dydt
             // This will use the now updated dy_now_ptr based on the values of y_now_ptr and t_now_ptr.
@@ -516,7 +452,8 @@ void RKSolver::p_step_implementation()
 
             // Update K based on the new dy values.
             for (size_t y_i = 0; y_i < this->num_y; y_i++) {
-                this->K_ptr[stride_1 + y_i] = this->dy_now_ptr[y_i];
+                stride_K = y_i * this->n_stages_p1;
+                this->K_ptr[stride_K + s] = this->dy_now_ptr[y_i];
             }
         }
 
@@ -530,9 +467,12 @@ void RKSolver::p_step_implementation()
             // RK23
             for (size_t y_i = 0; y_i < this->num_y; y_i++)
             {
-                temp_double =  this->B_ptr[0] * this->K_ptr[                  y_i];
-                temp_double += this->B_ptr[1] * this->K_ptr[    this->num_y + y_i];
-                temp_double += this->B_ptr[2] * this->K_ptr[2 * this->num_y + y_i];
+                stride_K = y_i * this->n_stages_p1;
+
+                temp_double  = this->B_ptr[0] * this->K_ptr[stride_K];
+                temp_double += this->B_ptr[1] * this->K_ptr[stride_K + 1];
+                temp_double += this->B_ptr[2] * this->K_ptr[stride_K + 2];
+
                 this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + (this->step * temp_double);
             }
             break;
@@ -540,12 +480,15 @@ void RKSolver::p_step_implementation()
             //RK45
             for (size_t y_i = 0; y_i < this->num_y; y_i++)
             {
-                temp_double =  this->B_ptr[0] * this->K_ptr[                  y_i];
-                temp_double += this->B_ptr[1] * this->K_ptr[    this->num_y + y_i];
-                temp_double += this->B_ptr[2] * this->K_ptr[2 * this->num_y + y_i];
-                temp_double += this->B_ptr[3] * this->K_ptr[3 * this->num_y + y_i];
-                temp_double += this->B_ptr[4] * this->K_ptr[4 * this->num_y + y_i];
-                temp_double += this->B_ptr[5] * this->K_ptr[5 * this->num_y + y_i];
+                stride_K = y_i * this->n_stages_p1;
+
+                temp_double  = this->B_ptr[0] * this->K_ptr[stride_K];
+                temp_double += this->B_ptr[1] * this->K_ptr[stride_K + 1];
+                temp_double += this->B_ptr[2] * this->K_ptr[stride_K + 2];
+                temp_double += this->B_ptr[3] * this->K_ptr[stride_K + 3];
+                temp_double += this->B_ptr[4] * this->K_ptr[stride_K + 4];
+                temp_double += this->B_ptr[5] * this->K_ptr[stride_K + 5];
+
                 this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + (this->step * temp_double);
             }
             break;
@@ -553,35 +496,39 @@ void RKSolver::p_step_implementation()
             //DOP853
             for (size_t y_i = 0; y_i < this->num_y; y_i++)
             {
-                temp_double = this->B_ptr[0]   * this->K_ptr[                   y_i];
-                temp_double += this->B_ptr[1]  * this->K_ptr[     this->num_y + y_i];
-                temp_double += this->B_ptr[2]  * this->K_ptr[2  * this->num_y + y_i];
-                temp_double += this->B_ptr[3]  * this->K_ptr[3  * this->num_y + y_i];
-                temp_double += this->B_ptr[4]  * this->K_ptr[4  * this->num_y + y_i];
-                temp_double += this->B_ptr[5]  * this->K_ptr[5  * this->num_y + y_i];
-                temp_double += this->B_ptr[6]  * this->K_ptr[6  * this->num_y + y_i];
-                temp_double += this->B_ptr[7]  * this->K_ptr[7  * this->num_y + y_i];
-                temp_double += this->B_ptr[8]  * this->K_ptr[8  * this->num_y + y_i];
-                temp_double += this->B_ptr[9]  * this->K_ptr[9  * this->num_y + y_i];
-                temp_double += this->B_ptr[10] * this->K_ptr[10 * this->num_y + y_i];
-                temp_double += this->B_ptr[11] * this->K_ptr[11 * this->num_y + y_i];
+                stride_K = y_i * this->n_stages_p1;
+
+                temp_double  = this->B_ptr[0]  * this->K_ptr[stride_K];
+                temp_double += this->B_ptr[1]  * this->K_ptr[stride_K + 1];
+                temp_double += this->B_ptr[2]  * this->K_ptr[stride_K + 2];
+                temp_double += this->B_ptr[3]  * this->K_ptr[stride_K + 3];
+                temp_double += this->B_ptr[4]  * this->K_ptr[stride_K + 4];
+                temp_double += this->B_ptr[5]  * this->K_ptr[stride_K + 5];
+                temp_double += this->B_ptr[6]  * this->K_ptr[stride_K + 6];
+                temp_double += this->B_ptr[7]  * this->K_ptr[stride_K + 7];
+                temp_double += this->B_ptr[8]  * this->K_ptr[stride_K + 8];
+                temp_double += this->B_ptr[9]  * this->K_ptr[stride_K + 9];
+                temp_double += this->B_ptr[10] * this->K_ptr[stride_K + 10];
+                temp_double += this->B_ptr[11] * this->K_ptr[stride_K + 11];
+
                 this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + (this->step * temp_double);
             }
             break;
         default:
             // Resort to unrolled loops
-            for (size_t j = 0; j < this->n_stages; j++) {
-                temp_double = this->B_ptr[j] * this->step;
-                stride_1 = j * this->num_y;
-                // We do not use rk_n_stages_plus1 here because we are chopping off the last row of K to match
-                //  the shape of B.
-                for (size_t y_i = 0; y_i < this->num_y; y_i++) {
-                    if (j == 0) {
-                        // Initialize
-                        this->y_now_ptr[y_i] = this->y_old_ptr[y_i];
-                    }
-                    this->y_now_ptr[y_i] += this->K_ptr[stride_1 + y_i] * temp_double;
+            for (size_t y_i = 0; y_i < this->num_y; y_i++)
+            {
+                stride_K = y_i * this->n_stages_p1;
+
+                // Initialize
+                temp_double = 0.0;
+
+                for (size_t j = 0; j < this->n_stages; j++)
+                {
+                    temp_double += this->B_ptr[j] * this->K_ptr[stride_K + j];
                 }
+
+                this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + (this->step * temp_double);
             }
             break;
         }
@@ -650,6 +597,7 @@ void RKSolver::reset()
     CySolverBase::reset();
     // Update stride information
     this->nstages_numy = this->n_stages * this->num_y;
+    this->n_stages_p1  = this->n_stages + 1;
 
     // Update initial step size
     if (this->user_provided_first_step_size == 0)
@@ -662,14 +610,14 @@ void RKSolver::reset()
         this->step_size_old = this->step_size;
     }
 
-    size_t stride;
+    size_t stride_K;
     // It is important to initialize the K variable with zeros
-    for (size_t i = 0; i < (this->n_stages + 1); i++)
+    for (size_t y_i = 0; y_i < this->num_y; y_i++)
     {
-        stride = i * this->num_y;
-        for (size_t y_i = 0; y_i < this->num_y; y_i++)
+        stride_K = y_i * this->n_stages_p1;
+        for (size_t j = 0; j < this->n_stages_p1; j++)
         {
-            this->K_ptr[stride + y_i] = 0.0;
+            this->K_ptr[stride_K + j] = 0.0;
         }
     }
 }
@@ -860,6 +808,7 @@ void DOP853::reset()
 
 void DOP853::p_estimate_error()
 {
+    size_t stride_K;
     double temp_double, error_denom, error_dot3, error_dot5, scale;
     double error_norm3 = 0.0;
     double error_norm5 = 0.0;
@@ -884,72 +833,74 @@ void DOP853::p_estimate_error()
         scale = atol + std::fmax(std::fabs(this->y_old_ptr[y_i]), std::fabs(this->y_now_ptr[y_i])) * rtol;
         scale = 1.0 / scale;
 
-        // Set last array of K equal to dydt
-        this->K_ptr[this->nstages_numy + y_i] = this->dy_now_ptr[y_i];
+        // NOTE: This step involving last column of K has nothing to do with error calculation. It was placed here to utilize the already needed y-loop for optimization.
+        // Set last column of K equal to dydt. K has size num_y * (n_stages + 1) so the last column is at n_stages
+        stride_K = y_i * this->n_stages_p1;
+        this->K_ptr[stride_K + this->n_stages] = this->dy_now_ptr[y_i];
 
         // Dot product between K and E3 & E5 (sum over n_stages + 1; for DOP853 n_stages = 12
         // n = 0
-        temp_double = this->K_ptr[                  y_i];
+        temp_double = this->K_ptr[stride_K];
         error_dot3  = this->E3_ptr[0] * temp_double;
         error_dot5  = this->E5_ptr[0] * temp_double;
 
         // n = 1
-        temp_double  = this->K_ptr[   this->num_y + y_i];
-        error_dot3  += this->E3_ptr[1] * temp_double;
-        error_dot5  += this->E5_ptr[1] * temp_double;
+        temp_double = this->K_ptr[stride_K + 1];
+        error_dot3 += this->E3_ptr[1] * temp_double;
+        error_dot5 += this->E5_ptr[1] * temp_double;
 
         // n = 2
-        temp_double = this->K_ptr[2 * this->num_y + y_i];
+        temp_double = this->K_ptr[stride_K + 2];
         error_dot3 += this->E3_ptr[2] * temp_double;
         error_dot5 += this->E5_ptr[2] * temp_double;
 
         // n = 3
-        temp_double = this->K_ptr[3 * this->num_y + y_i];
+        temp_double = this->K_ptr[stride_K + 3];
         error_dot3 += this->E3_ptr[3] * temp_double;
         error_dot5 += this->E5_ptr[3] * temp_double;
 
         // n = 4
-        temp_double = this->K_ptr[4 * this->num_y + y_i];
+        temp_double = this->K_ptr[stride_K + 4];
         error_dot3 += this->E3_ptr[4] * temp_double;
         error_dot5 += this->E5_ptr[4] * temp_double;
 
         // n = 5
-        temp_double = this->K_ptr[5 * this->num_y + y_i];
+        temp_double = this->K_ptr[stride_K + 5];
         error_dot3 += this->E3_ptr[5] * temp_double;
         error_dot5 += this->E5_ptr[5] * temp_double;
 
         // n = 6
-        temp_double = this->K_ptr[6 * this->num_y + y_i];
+        temp_double = this->K_ptr[stride_K + 6];
         error_dot3 += this->E3_ptr[6] * temp_double;
         error_dot5 += this->E5_ptr[6] * temp_double;
 
         // n = 7
-        temp_double = this->K_ptr[7 * this->num_y + y_i];
+        temp_double = this->K_ptr[stride_K + 7];
         error_dot3 += this->E3_ptr[7] * temp_double;
         error_dot5 += this->E5_ptr[7] * temp_double;
 
         // n = 8
-        temp_double = this->K_ptr[8 * this->num_y + y_i];
+        temp_double = this->K_ptr[stride_K + 8];
         error_dot3 += this->E3_ptr[8] * temp_double;
         error_dot5 += this->E5_ptr[8] * temp_double;
 
         // n = 9
-        temp_double = this->K_ptr[9 * this->num_y + y_i];
+        temp_double = this->K_ptr[stride_K + 9];
         error_dot3 += this->E3_ptr[9] * temp_double;
         error_dot5 += this->E5_ptr[9] * temp_double;
 
         // n = 10
-        temp_double = this->K_ptr[10 * this->num_y + y_i];
+        temp_double = this->K_ptr[stride_K + 10];
         error_dot3 += this->E3_ptr[10] * temp_double;
         error_dot5 += this->E5_ptr[10] * temp_double;
 
         // n = 11
-        temp_double = this->K_ptr[11 * this->num_y + y_i];
+        temp_double = this->K_ptr[stride_K + 11];
         error_dot3 += this->E3_ptr[11] * temp_double;
         error_dot5 += this->E5_ptr[11] * temp_double;
 
         // n = 12
-        temp_double = this->K_ptr[12 * this->num_y + y_i];
+        temp_double = this->K_ptr[stride_K + 12];
         error_dot3 += this->E3_ptr[12] * temp_double;
         error_dot5 += this->E5_ptr[12] * temp_double;
 

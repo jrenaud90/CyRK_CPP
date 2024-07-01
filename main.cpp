@@ -21,7 +21,7 @@ int main(){
 
     double time_span[2] = {0.0, 500.0};
     double* time_span_ptr = &time_span[0];
-    int method = 2;
+    int method = 1;
     int max_i = 1000;
     
     double y0[2] = {20.0, 20.0};

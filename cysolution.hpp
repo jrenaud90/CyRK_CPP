@@ -22,8 +22,8 @@ protected:
     double num_dy_dbl = 0.0;
 
     // Current storage information
-    size_t original_expected_size;
-    size_t storage_capacity;
+    size_t original_expected_size = 0;
+    size_t storage_capacity = 0;
 
     // Storage for arrays
     std::vector<double> time_domain;

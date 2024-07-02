@@ -66,8 +66,8 @@ void CySolverResult::p_expand_storage()
 
         try
         {
-            this->time_domain_ref.reserve(this->storage_capacity);
-            this->solution_ref.reserve(this->storage_capacity * this->num_dy);
+            this->time_domain.reserve(this->storage_capacity);
+            this->solution.reserve(this->storage_capacity * this->num_dy);
         }
         catch (std::bad_alloc const&)
         {
@@ -86,8 +86,8 @@ void CySolverResult::reset()
     if (this->reset_called)
     {
         // The storage array may have already been set. Delete any data and reset it.
-        this->time_domain_ref.clear();
-        this->solution_ref.clear();
+        this->time_domain.clear();
+        this->solution.clear();
     }
 
     // Set the storage size to the original expected size.
@@ -96,8 +96,8 @@ void CySolverResult::reset()
     // Reserve the memory for the vectors
     try
     {
-        this->time_domain_ref.reserve(this->storage_capacity);
-        this->solution_ref.reserve(this->storage_capacity * this->num_dy);
+        this->time_domain.reserve(this->storage_capacity);
+        this->solution.reserve(this->storage_capacity * this->num_dy);
     }
     catch (std::bad_alloc const&)
     {
@@ -118,7 +118,7 @@ void CySolverResult::save_data(double new_t, double* new_solution_y, double* new
         this->p_expand_storage();
     }
 
-    this->time_domain_ref.push_back(new_t);
+    this->time_domain.push_back(new_t);
 
     // Store y values (use push back if num_y less than 5 otherwise use insert)
     switch (this->num_y)
@@ -126,41 +126,41 @@ void CySolverResult::save_data(double new_t, double* new_solution_y, double* new
         case 0:
             break;
         case 1:
-            this->solution_ref.push_back(new_solution_y[0]);
+            this->solution.push_back(new_solution_y[0]);
             break;
         case 2:
-            this->solution_ref.push_back(new_solution_y[0]);
-            this->solution_ref.push_back(new_solution_y[1]);
+            this->solution.push_back(new_solution_y[0]);
+            this->solution.push_back(new_solution_y[1]);
             break;
         case 3:
-            this->solution_ref.push_back(new_solution_y[0]);
-            this->solution_ref.push_back(new_solution_y[1]);
-            this->solution_ref.push_back(new_solution_y[2]);
+            this->solution.push_back(new_solution_y[0]);
+            this->solution.push_back(new_solution_y[1]);
+            this->solution.push_back(new_solution_y[2]);
             break;
         case 4:
-            this->solution_ref.push_back(new_solution_y[0]);
-            this->solution_ref.push_back(new_solution_y[1]);
-            this->solution_ref.push_back(new_solution_y[2]);
-            this->solution_ref.push_back(new_solution_y[3]);
-            this->solution_ref.push_back(new_solution_y[4]);
+            this->solution.push_back(new_solution_y[0]);
+            this->solution.push_back(new_solution_y[1]);
+            this->solution.push_back(new_solution_y[2]);
+            this->solution.push_back(new_solution_y[3]);
+            this->solution.push_back(new_solution_y[4]);
             break;
         case 5:
-            this->solution_ref.push_back(new_solution_y[0]);
-            this->solution_ref.push_back(new_solution_y[1]);
-            this->solution_ref.push_back(new_solution_y[2]);
-            this->solution_ref.push_back(new_solution_y[3]);
-            this->solution_ref.push_back(new_solution_y[4]);
+            this->solution.push_back(new_solution_y[0]);
+            this->solution.push_back(new_solution_y[1]);
+            this->solution.push_back(new_solution_y[2]);
+            this->solution.push_back(new_solution_y[3]);
+            this->solution.push_back(new_solution_y[4]);
             break;
         case 6:
-            this->solution_ref.push_back(new_solution_y[0]);
-            this->solution_ref.push_back(new_solution_y[1]);
-            this->solution_ref.push_back(new_solution_y[2]);
-            this->solution_ref.push_back(new_solution_y[3]);
-            this->solution_ref.push_back(new_solution_y[4]);
-            this->solution_ref.push_back(new_solution_y[5]);
+            this->solution.push_back(new_solution_y[0]);
+            this->solution.push_back(new_solution_y[1]);
+            this->solution.push_back(new_solution_y[2]);
+            this->solution.push_back(new_solution_y[3]);
+            this->solution.push_back(new_solution_y[4]);
+            this->solution.push_back(new_solution_y[5]);
             break;
         default:
-            this->solution_ref.insert(this->solution_ref.end(), new_solution_y, new_solution_y + this->num_y);
+            this->solution.insert(this->solution.end(), new_solution_y, new_solution_y + this->num_y);
             break;
     }
 
@@ -171,40 +171,40 @@ void CySolverResult::save_data(double new_t, double* new_solution_y, double* new
             // Not capturing extra. do nothing.
             break;
         case 1:
-            this->solution_ref.push_back(new_solution_dy[this->num_y]);
+            this->solution.push_back(new_solution_dy[this->num_y]);
             break;
         case 2:
-            this->solution_ref.push_back(new_solution_dy[this->num_y    ]);
-            this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
+            this->solution.push_back(new_solution_dy[this->num_y    ]);
+            this->solution.push_back(new_solution_dy[this->num_y + 1]);
             break;
         case 3:
-            this->solution_ref.push_back(new_solution_dy[this->num_y    ]);
-            this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
-            this->solution_ref.push_back(new_solution_dy[this->num_y + 2]);
+            this->solution.push_back(new_solution_dy[this->num_y    ]);
+            this->solution.push_back(new_solution_dy[this->num_y + 1]);
+            this->solution.push_back(new_solution_dy[this->num_y + 2]);
             break;
         case 4:
-            this->solution_ref.push_back(new_solution_dy[this->num_y    ]);
-            this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
-            this->solution_ref.push_back(new_solution_dy[this->num_y + 2]);
-            this->solution_ref.push_back(new_solution_dy[this->num_y + 3]);
+            this->solution.push_back(new_solution_dy[this->num_y    ]);
+            this->solution.push_back(new_solution_dy[this->num_y + 1]);
+            this->solution.push_back(new_solution_dy[this->num_y + 2]);
+            this->solution.push_back(new_solution_dy[this->num_y + 3]);
             break;
         case 5:
-            this->solution_ref.push_back(new_solution_dy[this->num_y    ]);
-            this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
-            this->solution_ref.push_back(new_solution_dy[this->num_y + 2]);
-            this->solution_ref.push_back(new_solution_dy[this->num_y + 3]);
-            this->solution_ref.push_back(new_solution_dy[this->num_y + 4]);
+            this->solution.push_back(new_solution_dy[this->num_y    ]);
+            this->solution.push_back(new_solution_dy[this->num_y + 1]);
+            this->solution.push_back(new_solution_dy[this->num_y + 2]);
+            this->solution.push_back(new_solution_dy[this->num_y + 3]);
+            this->solution.push_back(new_solution_dy[this->num_y + 4]);
             break;
         case 6:
-            this->solution_ref.push_back(new_solution_dy[this->num_y    ]);
-            this->solution_ref.push_back(new_solution_dy[this->num_y + 1]);
-            this->solution_ref.push_back(new_solution_dy[this->num_y + 2]);
-            this->solution_ref.push_back(new_solution_dy[this->num_y + 3]);
-            this->solution_ref.push_back(new_solution_dy[this->num_y + 4]);
-            this->solution_ref.push_back(new_solution_dy[this->num_y + 5]);
+            this->solution.push_back(new_solution_dy[this->num_y    ]);
+            this->solution.push_back(new_solution_dy[this->num_y + 1]);
+            this->solution.push_back(new_solution_dy[this->num_y + 2]);
+            this->solution.push_back(new_solution_dy[this->num_y + 3]);
+            this->solution.push_back(new_solution_dy[this->num_y + 4]);
+            this->solution.push_back(new_solution_dy[this->num_y + 5]);
             break;
         default:
-            this->solution_ref.insert(this->solution_ref.end(), new_solution_dy[this->num_y], new_solution_dy[this->num_y] + this->num_extra);
+            this->solution.insert(this->solution.end(), new_solution_dy[this->num_y], new_solution_dy[this->num_y] + this->num_extra);
             break;
     }
 }

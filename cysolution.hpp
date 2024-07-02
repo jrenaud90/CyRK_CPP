@@ -26,8 +26,6 @@ protected:
     size_t storage_capacity = 0;
 
     // Storage for arrays
-    std::vector<double> time_domain;
-    std::vector<double> solution;
     bool capture_extra = false;
 
 public:
@@ -38,8 +36,8 @@ public:
     size_t size = 0;
 
     // Pointer to storage arrays
-    std::vector<double>& time_domain_ref = this->time_domain;
-    std::vector<double>& solution_ref = this->solution;
+    std::vector<double> time_domain;
+    std::vector<double> solution;
 
     // Error codes
     // 0    : CySolverResult initialized. No error recorded.

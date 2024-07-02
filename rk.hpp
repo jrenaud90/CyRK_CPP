@@ -405,8 +405,8 @@ protected:
 
     // Tolerances
     // For the same reason num_y is limited, the total number of tolerances are limited.
-    double rtols[25] = { std::nan("") };
-    double atols[25] = { std::nan("") };
+    double rtols[Y_LIMIT] = { std::nan("") };
+    double atols[Y_LIMIT] = { std::nan("") };
     double* rtols_ptr = &rtols[0];
     double* atols_ptr = &atols[0];
     bool use_array_rtols = false;
@@ -425,7 +425,7 @@ protected:
 
 // Methods
 protected:
-    virtual void p_estimate_error();
+    virtual inline void p_estimate_error();
     virtual void p_step_implementation() override;
 
 public:
@@ -460,7 +460,7 @@ public:
 class RK23 : public RKSolver {
 
 protected:
-    double K[4 * 25] = { 0.0 };
+    double K[4 * Y_LIMIT] = { 0.0 };
 
 public:
     // Copy over base class constructors
@@ -472,7 +472,7 @@ public:
 class RK45 : public RKSolver {
 
 protected:
-    double K[7 * 25] = { 0.0 };
+    double K[7 * Y_LIMIT] = { 0.0 };
 
 public:
     // Copy over base class constructors
@@ -483,7 +483,7 @@ public:
 class DOP853 : public RKSolver {
 
 protected:
-    double K[13 * 25] = { 0.0 };
+    double K[13 * Y_LIMIT] = { 0.0 };
 
 public:
     // Copy over base class constructors

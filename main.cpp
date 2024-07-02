@@ -100,7 +100,7 @@ int main(){
 
     for (size_t i = 0; i < final_size; i++)
     {
-        datastream << result->time_domain_ref[i] << ", " << result->solution_ref[2 * i] << ", " << result->solution_ref[2 * i + 1] << std::endl;
+        datastream << result->time_domain[i] << ", " << result->solution[2 * i] << ", " << result->solution[2 * i + 1] << std::endl;
     }
     datastream.close();
     std::cout << "Data saved." << std::endl;

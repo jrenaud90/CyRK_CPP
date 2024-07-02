@@ -100,7 +100,7 @@ RKSolver::~RKSolver()
 
 
 // Protected Methods
-void RKSolver::p_estimate_error()
+inline void RKSolver::p_estimate_error()
 {
 
     size_t stride_K;

@@ -13,7 +13,7 @@ class CySolverResult {
 // Attributes
 protected:
     // Message storage
-    char message[256];
+    char message[MESSAGE_SIZE];
 
     // Metadata
     size_t num_extra = 0;

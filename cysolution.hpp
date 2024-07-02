@@ -16,8 +16,6 @@ protected:
     char message[256];
 
     // Metadata
-    size_t num_y = 0;
-    size_t num_dy = 0;
     size_t num_extra = 0;
     double num_dy_dbl = 0.0;
 
@@ -29,6 +27,10 @@ protected:
     bool capture_extra = false;
 
 public:
+    // Metadata
+    size_t num_y = 0;
+    size_t num_dy = 0;
+
     // Status information
     char* message_ptr = &this->message[0];
     bool success = false;

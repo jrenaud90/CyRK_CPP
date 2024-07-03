@@ -29,8 +29,6 @@ protected:
 
     // Buffer
     unsigned int current_buffer_size = 0;
-    double data_buffer_time[BUFFER_SIZE];
-    double data_buffer_y[BUFFER_SIZE * DY_LIMIT];
     double* data_buffer_time_ptr = &data_buffer_time[0];
     double* data_buffer_y_ptr = &data_buffer_y[0];
 
@@ -60,6 +58,10 @@ public:
     std::vector<double> time_domain;
     std::vector<double> solution;
 
+private:
+    // Put data buffers at the end of memory stack
+    double data_buffer_time[BUFFER_SIZE];
+    double data_buffer_y[BUFFER_SIZE * DY_LIMIT];
 
 // Methods
 protected:

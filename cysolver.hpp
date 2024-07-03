@@ -4,6 +4,8 @@
 
 #include <memory>
 
+#include <Python.h>
+
 #include "common.hpp"
 #include "cysolution.hpp"
 
@@ -71,6 +73,10 @@ public:
     double* y_now_ptr = &y_now[0];
     double* dy_now_ptr = &dy_now[0];
 
+    // PySolver Attributes
+    bool use_pysolver = false;
+    PyObject* cython_extension_class_instance = nullptr;
+
 
 // Methods
 protected:
@@ -95,7 +101,11 @@ public:
     
     bool check_status() const;
     virtual void reset();
-    virtual void diffeq();
+    void diffeq();
     void take_step();
     void change_storage(std::shared_ptr<CySolverResult> new_storage_ptr, bool auto_reset = true);
+
+    // PySolver methods
+    void set_cython_extension_instance(PyObject* cython_extension_class_instance);
+    void py_diffeq();
 };

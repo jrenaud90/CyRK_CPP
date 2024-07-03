@@ -122,7 +122,17 @@ bool CySolverBase::check_status() const
 
 void CySolverBase::diffeq()
 {
-    this->diffeq_ptr(this->dy_now_ptr, this->t_now, this->y_now_ptr, this->args_ptr);
+    // Should we call the c function or the python one?
+    if (this->use_pysolver)
+    {
+        // Call cython-wrapped python function
+        this->py_diffeq();
+    }
+    else
+    {
+        // Call c function
+        this->diffeq_ptr(this->dy_now_ptr, this->t_now, this->y_now_ptr, this->args_ptr);
+    }
 }
 
 void CySolverBase::reset()
@@ -242,5 +252,51 @@ void CySolverBase::change_storage(std::shared_ptr<CySolverResult> new_storage_pt
     if (auto_reset)
     {
         this->reset();
+    }
+}
+
+
+// !!!
+// Uncomment these dummy methods if working outside of CyRK and you just want the program to compile and run for testing/developing the C++ only code.
+/*
+bool import_CyRK__cy__pysolver_cyhook()
+{
+    return true;
+}
+
+int call_diffeq_from_cython(PyObject* x)
+{
+    return 1;
+}
+*/
+
+/* PySolver Methods */
+void CySolverBase::set_cython_extension_instance(PyObject* cython_extension_class_instance)
+{
+    if (cython_extension_class_instance)
+    {
+        this->cython_extension_class_instance = cython_extension_class_instance;
+        this->use_pysolver = true;
+
+        // Import the cython/python module (functionality provided by "pysolver_api.h")
+        if (import_CyRK__cy__pysolver_cyhook())
+        {
+            // pass
+        }
+        else
+        {
+            Py_XINCREF(this->cython_extension_class_instance);
+        }
+    }
+}
+
+void CySolverBase::py_diffeq()
+{
+    int diffeq_status = call_diffeq_from_cython(this->cython_extension_class_instance);
+    if (diffeq_status < 0)
+    {
+        this->status = -50;
+        this->storage_ptr->error_code = -50;
+        this->storage_ptr->update_message("Error when calling cython diffeq wrapper from PySolverBase c++ class.\n");
     }
 }

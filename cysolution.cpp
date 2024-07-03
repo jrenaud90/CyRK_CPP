@@ -64,6 +64,9 @@ void CySolverResult::p_expand_storage()
     else
     {
         this->storage_capacity = (size_t)new_storage_size_dbl;
+        // Ensure there is enough new room for the new size.
+        this->storage_capacity = std::max<size_t>(this->storage_capacity, this->size + 1);
+
         round_to_2(this->storage_capacity);
         try
         {
@@ -107,9 +110,9 @@ void CySolverResult::reset()
     this->reset_called = true;
 }
 
-void CySolverResult::save_data(const double new_t, double* const new_solution_y_ptr, double* const new_solution_dy_ptr)
+void CySolverResult::p_offload_data()
 {
-    this->size++;
+    this->size += this->current_buffer_size;
 
     if (this->size > this->storage_capacity)
     {
@@ -117,95 +120,52 @@ void CySolverResult::save_data(const double new_t, double* const new_solution_y_
         this->p_expand_storage();
     }
 
-    this->time_domain.push_back(new_t);
+    // Save time results
+    this->time_domain.insert(this->time_domain.end(), this->data_buffer_time_ptr, this->data_buffer_time_ptr + this->current_buffer_size);
 
-    // Store y values (use push back if num_y less than 5 otherwise use insert)
-    switch (this->num_y)
+    // Save y results and any extra output
+    this->solution.insert(this->solution.end(), this->data_buffer_y_ptr, this->data_buffer_y_ptr + (this->num_dy * this->current_buffer_size));
+
+    // Reset buffers
+    this->current_buffer_size = 0;
+}
+
+void CySolverResult::save_data(const double new_t, double* const new_solution_y_ptr, double* const new_solution_dy_ptr)
+{
+    // Check if our data buffer is full
+    if (this->current_buffer_size >= BUFFER_SIZE)
     {
-        case 0:
-            break;
-        case 1:
-            this->solution.push_back(new_solution_y_ptr[0]);
-            break;
-        case 2:
-            this->solution.push_back(new_solution_y_ptr[0]);
-            this->solution.push_back(new_solution_y_ptr[1]);
-            break;
-        case 3:
-            this->solution.push_back(new_solution_y_ptr[0]);
-            this->solution.push_back(new_solution_y_ptr[1]);
-            this->solution.push_back(new_solution_y_ptr[2]);
-            break;
-        case 4:
-            this->solution.push_back(new_solution_y_ptr[0]);
-            this->solution.push_back(new_solution_y_ptr[1]);
-            this->solution.push_back(new_solution_y_ptr[2]);
-            this->solution.push_back(new_solution_y_ptr[3]);
-            this->solution.push_back(new_solution_y_ptr[4]);
-            break;
-        case 5:
-            this->solution.push_back(new_solution_y_ptr[0]);
-            this->solution.push_back(new_solution_y_ptr[1]);
-            this->solution.push_back(new_solution_y_ptr[2]);
-            this->solution.push_back(new_solution_y_ptr[3]);
-            this->solution.push_back(new_solution_y_ptr[4]);
-            break;
-        case 6:
-            this->solution.push_back(new_solution_y_ptr[0]);
-            this->solution.push_back(new_solution_y_ptr[1]);
-            this->solution.push_back(new_solution_y_ptr[2]);
-            this->solution.push_back(new_solution_y_ptr[3]);
-            this->solution.push_back(new_solution_y_ptr[4]);
-            this->solution.push_back(new_solution_y_ptr[5]);
-            break;
-        default:
-            this->solution.insert(this->solution.end(), new_solution_y_ptr, new_solution_y_ptr + this->num_y);
-            break;
+        this->p_offload_data();
     }
 
-    // Repeak for any extra information that is captured.
-    switch (this->num_extra)
+    // Save data in buffer
+    // Save time
+    this->data_buffer_time_ptr[this->current_buffer_size] = new_t;
+
+    // Save y
+    unsigned int stride = this->current_buffer_size * this->num_dy;
+    std::memcpy(&this->data_buffer_y_ptr[stride], new_solution_y_ptr, sizeof(double) * this->num_y);
+
+    // Save extra
+    if (this->num_extra > 0)
     {
-        case 0:
-            // Not capturing extra. do nothing.
-            break;
-        case 1:
-            this->solution.push_back(new_solution_dy_ptr[this->num_y]);
-            break;
-        case 2:
-            this->solution.push_back(new_solution_dy_ptr[this->num_y    ]);
-            this->solution.push_back(new_solution_dy_ptr[this->num_y + 1]);
-            break;
-        case 3:
-            this->solution.push_back(new_solution_dy_ptr[this->num_y    ]);
-            this->solution.push_back(new_solution_dy_ptr[this->num_y + 1]);
-            this->solution.push_back(new_solution_dy_ptr[this->num_y + 2]);
-            break;
-        case 4:
-            this->solution.push_back(new_solution_dy_ptr[this->num_y    ]);
-            this->solution.push_back(new_solution_dy_ptr[this->num_y + 1]);
-            this->solution.push_back(new_solution_dy_ptr[this->num_y + 2]);
-            this->solution.push_back(new_solution_dy_ptr[this->num_y + 3]);
-            break;
-        case 5:
-            this->solution.push_back(new_solution_dy_ptr[this->num_y    ]);
-            this->solution.push_back(new_solution_dy_ptr[this->num_y + 1]);
-            this->solution.push_back(new_solution_dy_ptr[this->num_y + 2]);
-            this->solution.push_back(new_solution_dy_ptr[this->num_y + 3]);
-            this->solution.push_back(new_solution_dy_ptr[this->num_y + 4]);
-            break;
-        case 6:
-            this->solution.push_back(new_solution_dy_ptr[this->num_y    ]);
-            this->solution.push_back(new_solution_dy_ptr[this->num_y + 1]);
-            this->solution.push_back(new_solution_dy_ptr[this->num_y + 2]);
-            this->solution.push_back(new_solution_dy_ptr[this->num_y + 3]);
-            this->solution.push_back(new_solution_dy_ptr[this->num_y + 4]);
-            this->solution.push_back(new_solution_dy_ptr[this->num_y + 5]);
-            break;
-        default:
-            this->solution.insert(this->solution.end(), new_solution_dy_ptr[this->num_y], new_solution_dy_ptr[this->num_y] + this->num_extra);
-            break;
+        std::memcpy(&this->data_buffer_y_ptr[stride + this->num_y], &new_solution_dy_ptr[this->num_y], sizeof(double) * this->num_extra);
     }
+
+    this->current_buffer_size++;
+}
+
+void CySolverResult::finalize()
+{
+    // Offload anything in the buffer
+    if (this->current_buffer_size > 0)
+    {
+        this->p_offload_data();
+    }
+    
+    // Shrink vectors
+    this->time_domain.shrink_to_fit();
+    this->solution.shrink_to_fit();
 }
 
 void CySolverResult::update_message(const char* const new_message_ptr)

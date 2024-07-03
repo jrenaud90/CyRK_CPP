@@ -35,6 +35,9 @@ void method_solve(
     {
         solver.take_step();
     }
+
+    // Finalize solution storage
+    solution_ptr->finalize();
 }
 
 

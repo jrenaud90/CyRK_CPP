@@ -27,6 +27,13 @@ protected:
     // Storage for arrays
     bool capture_extra = false;
 
+    // Buffer
+    unsigned int current_buffer_size = 0;
+    double data_buffer_time[BUFFER_SIZE];
+    double data_buffer_y[BUFFER_SIZE * DY_LIMIT];
+    double* data_buffer_time_ptr = &data_buffer_time[0];
+    double* data_buffer_y_ptr = &data_buffer_y[0];
+
 public:
     // Status information
     bool success      = false;
@@ -46,8 +53,8 @@ public:
     size_t size = 0;
 
     // Metadata
-    unsigned int num_y  = 0;
-    unsigned int num_dy = 0;
+    unsigned int num_y    = 0;
+    unsigned int num_dy   = 0;
 
     // Pointer to storage arrays
     std::vector<double> time_domain;
@@ -57,12 +64,15 @@ public:
 // Methods
 protected:
     void p_expand_storage();
+    void p_offload_data();
 
 public:
     CySolverResult();
     CySolverResult(const int num_y, const int num_extra, const size_t expected_size);
     ~CySolverResult();
     void save_data(const double new_t, double* const new_solution_y_ptr, double* const new_solution_dy_ptr);
+    void finalize();
     void reset();
     void update_message(const char* const new_message_ptr);
+
 };

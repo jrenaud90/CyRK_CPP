@@ -36,7 +36,9 @@ atol = 1.0e-8
 
 from scipy.integrate import solve_ivp
 
-solution = solve_ivp(func, t_span, y0, method='DOP853', rtol=rtol, atol=atol)
+solution = solve_ivp(func, t_span, y0, method='RK45', rtol=rtol, atol=atol)
 
 print('Solve IVP Shape', solution.y.shape)
 diff_plot(solution.t, solution.y)
+
+# breakpoint()

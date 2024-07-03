@@ -439,7 +439,6 @@ public:
         const double t_end,
         double* y0_ptr,
         int num_y,
-        bool capture_extra = false,
         int num_extra = 0,
         double* args_ptr = nullptr,
         size_t max_num_steps = 0,

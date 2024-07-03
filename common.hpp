@@ -38,7 +38,7 @@ const double DYNAMIC_GROWTH_RATE = 1.618;
 const double SIZE_MAX_DBL = 0.99 * SIZE_MAX;
 
 
-typedef void (*DiffeqFuncType)(double*, double, double*, double*);
+typedef void (*DiffeqFuncType)(double*, double, double*, const double*);
 
 
 struct MaxNumStepsOutput
@@ -63,5 +63,4 @@ size_t find_expected_size(
     int num_y,
     int num_extra,
     double t_delta_abs,
-    double rtol_min,
-    bool capture_extra);
+    double rtol_min);

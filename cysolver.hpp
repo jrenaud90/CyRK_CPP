@@ -17,19 +17,19 @@ protected:
     // ** Attributes **
 
     // Time variables
-    double t_start = 0.0;
-    double t_end = 0.0;
-    double t_old = 0.0;
-    double t_delta = 0.0;
-    double t_delta_abs = 0.0;
+    double t_start       = 0.0;
+    double t_end         = 0.0;
+    double t_old         = 0.0;
+    double t_delta       = 0.0;
+    double t_delta_abs   = 0.0;
     double direction_inf = 0.0;
 
     // Dependent variables
-    double num_y_dbl = 0.0;
+    unsigned int num_dy = 0;
+    double num_y_dbl  = 0.0;
     double num_y_sqrt = 0.0;
-    int num_dy = 0;
     // The size of the stack allocated tracking arrays is equal to the maximum allowed `num_y` (25).
-    double y0[Y_LIMIT] = { 0.0 };
+    double y0[Y_LIMIT]    = { 0.0 };
     double y_old[Y_LIMIT] = { 0.0 };
     double y_now[Y_LIMIT] = { 0.0 };
     // For dy, both the dy/dt and any extra outputs are stored. So the maximum size is `num_y` (25) + `num_extra` (25)
@@ -37,15 +37,15 @@ protected:
     double dy_now[DY_LIMIT] = { 0.0 };
 
     // dy_now_ptr and y_now_ptr are declared in public.
-    double* y0_ptr = &y0[0];
-    double* y_old_ptr = &y_old[0];
+    double* y0_ptr     = &y0[0];
+    double* y_old_ptr  = &y_old[0];
     double* dy_old_ptr = &dy_old[0];
 
     // Integration step information
     size_t max_num_steps = 0;
 
     // Differential equation information
-    double* args_ptr = nullptr;
+    const double* args_ptr    = nullptr;
     DiffeqFuncType diffeq_ptr = nullptr;
 
     // Information on capturing extra information during integration.
@@ -53,23 +53,23 @@ protected:
 
     // Keep bools together to reduce size
     bool direction_flag = false;
-    bool reset_called = false;
+    bool reset_called   = false;
+    bool capture_extra  = false;
     bool user_provided_max_num_steps = false;
-    bool capture_extra = false;
 
 public:
     // Status attributes
     int status = -999;
 
     // Meta data
-    int num_y = 0;
+    unsigned int num_y = 0;
 
     // Result storage
     std::shared_ptr<CySolverResult> storage_ptr = nullptr;
 
     // State attributes
     size_t len_t = 0;
-    double t_now;
+    double t_now = 0.0;
     double* y_now_ptr = &y_now[0];
     double* dy_now_ptr = &dy_now[0];
 
@@ -84,19 +84,18 @@ public:
     CySolverBase(
         // Input variables
         DiffeqFuncType diffeq_ptr,
-        std::shared_ptr<CySolverResult> storage_ptr,
+        std::shared_ptr<CySolverResult> const storage_ptr,
         const double t_start,
         const double t_end,
-        double* y0_ptr,
-        int num_y,
-        bool capture_extra = false,
-        int num_extra = 0,
-        double* args_ptr = nullptr,
-        size_t max_num_steps = 0,
-        size_t max_ram_MB = 2000
+        const double* const y0_ptr,
+        const unsigned int num_y,
+        const unsigned int num_extra = 0,
+        const double* const args_ptr = nullptr,
+        const size_t max_num_steps = 0,
+        const size_t max_ram_MB = 2000
     );
     
-    bool check_status();
+    bool check_status() const;
     virtual void reset();
     virtual void diffeq();
     void take_step();

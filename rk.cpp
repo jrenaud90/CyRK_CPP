@@ -13,7 +13,6 @@ RKSolver::RKSolver(
         const double t_end,
         double* y0_ptr,
         int num_y,
-        bool capture_extra,
         int num_extra,
         double* args_ptr,
         size_t max_num_steps,
@@ -24,7 +23,7 @@ RKSolver::RKSolver(
         double* rtols_ptr,
         double* atols_ptr,
         double max_step_size,
-        double first_step_size) : CySolverBase(diffeq_ptr, storage_ptr, t_start, t_end, y0_ptr, num_y, capture_extra, num_extra, args_ptr, max_num_steps, max_ram_MB)
+        double first_step_size) : CySolverBase(diffeq_ptr, storage_ptr, t_start, t_end, y0_ptr, num_y, num_extra, args_ptr, max_num_steps, max_ram_MB)
 {
     // Check for errors
     if (first_step_size != 0.0)

@@ -46,8 +46,7 @@ size_t find_expected_size(
     const int num_y,
     const int num_extra,
     const double t_delta_abs,
-    const double rtol_min,
-    const bool capture_extra)
+    const double rtol_min)
     /* Finds an expected size for storage arrays (length of time domain) that is suitable to the provided problem */
 {
     // Pick starting value that works with most problems
@@ -56,7 +55,7 @@ size_t find_expected_size(
     temp_expected_size = std::fmax(temp_expected_size, std::fmax(t_delta_abs / ARRAY_PREALLOC_TABS_SCALE, ARRAY_PREALLOC_RTOL_SCALE / rtol_min));
     // Fix values that are very small / large
     temp_expected_size = std::fmax(temp_expected_size, MIN_ARRAY_PREALLOCATE_SIZE);
-    double max_expected = capture_extra ? MAX_ARRAY_PREALLOCATE_SIZE_DBL / (num_y + num_extra) : MAX_ARRAY_PREALLOCATE_SIZE_DBL / num_y;
+    double max_expected = num_extra ? MAX_ARRAY_PREALLOCATE_SIZE_DBL / (num_y + num_extra) : MAX_ARRAY_PREALLOCATE_SIZE_DBL / num_y;
 
     temp_expected_size = fmin(temp_expected_size, max_expected);
     size_t expected_size_to_use = (size_t)std::floor(temp_expected_size);

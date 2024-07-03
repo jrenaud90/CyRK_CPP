@@ -10,12 +10,11 @@ std::shared_ptr<CySolverResult> cysolve_ivp(
     DiffeqFuncType diffeq_ptr,
     double* t_span_ptr,
     double* y0_ptr,
-    int num_y,
-    int method,
+    unsigned int num_y,
+    unsigned int method,
     // General optional arguments
     size_t expected_size = 0,
-    bool capture_extra = false,
-    int num_extra = 0,
+    unsigned int num_extra = 0,
     double* args_ptr = nullptr,
     // rk optional arguments
     size_t max_num_steps = 0,

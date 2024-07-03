@@ -39,9 +39,6 @@ CySolverResult::CySolverResult(const int num_y, const int num_extra, const size_
 
     // Initialize other parameters
     this->update_message("CySolverResult Initialized.");
-
-    // Call reset to initialize vectors
-    this->reset();
 }
 
 

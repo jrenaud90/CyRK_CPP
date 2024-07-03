@@ -8,10 +8,9 @@ void method_solve(
         const double t_start,
         const double t_end,
         double* y0_ptr,
-        int num_y,
+        unsigned int num_y,
         // General optional arguments
-        bool capture_extra,
-        int num_extra,
+        unsigned int num_extra,
         double* args_ptr,
         // rk optional arguments
         size_t max_num_steps,
@@ -26,9 +25,9 @@ void method_solve(
     // Construct solver based on type
     T solver = T(
         // Common Inputs
-        diffeq_ptr, solution_ptr, t_start, t_end, y0_ptr, num_y,
+        diffeq_ptr, solution_ptr, t_start, t_end, y0_ptr, num_y, num_extra, args_ptr, max_num_steps, max_ram_MB,
         // RK Inputs
-        capture_extra, num_extra, args_ptr, max_num_steps, max_ram_MB, rtol, atol, rtols_ptr, atols_ptr, max_step_size, first_step_size
+        rtol, atol, rtols_ptr, atols_ptr, max_step_size, first_step_size
     );
 
     // Run integrator
@@ -43,12 +42,11 @@ std::shared_ptr<CySolverResult> cysolve_ivp(
         DiffeqFuncType diffeq_ptr,
         double* t_span_ptr,
         double* y0_ptr,
-        int num_y,
-        int method,
+        unsigned int num_y,
+        unsigned int method,
         // General optional arguments
         size_t expected_size,
-        bool capture_extra,
-        int num_extra,
+        unsigned int num_extra,
         double* args_ptr,
         // rk optional arguments
         size_t max_num_steps,
@@ -95,7 +93,7 @@ std::shared_ptr<CySolverResult> cysolve_ivp(
             }
             min_rtol = rtol_tmp;
         }
-        expected_size = find_expected_size(num_y, num_extra, std::fabs(t_end - t_start), min_rtol, capture_extra);
+        expected_size = find_expected_size(num_y, num_extra, std::fabs(t_end - t_start), min_rtol);
     }
 
     // Build classes
@@ -107,27 +105,27 @@ std::shared_ptr<CySolverResult> cysolve_ivp(
             // RK23
             method_solve<RK23>(
                 // Common Inputs
-                diffeq_ptr, solution_ptr, t_start, t_end, y0_ptr, num_y,
+                diffeq_ptr, solution_ptr, t_start, t_end, y0_ptr, num_y, num_extra, args_ptr, max_num_steps, max_ram_MB,
                 // RK Inputs
-                capture_extra, num_extra, args_ptr, max_num_steps, max_ram_MB, rtol, atol, rtols_ptr, atols_ptr, max_step_size, first_step_size
+                rtol, atol, rtols_ptr, atols_ptr, max_step_size, first_step_size
             );
             break;
         case 1:
             // RK45
             method_solve<RK45>(
                 // Common Inputs
-                diffeq_ptr, solution_ptr, t_start, t_end, y0_ptr, num_y,
+                diffeq_ptr, solution_ptr, t_start, t_end, y0_ptr, num_y, num_extra, args_ptr, max_num_steps, max_ram_MB,
                 // RK Inputs
-                capture_extra, num_extra, args_ptr, max_num_steps, max_ram_MB, rtol, atol, rtols_ptr, atols_ptr, max_step_size, first_step_size
+                rtol, atol, rtols_ptr, atols_ptr, max_step_size, first_step_size
             );
             break;
         case 2:
             // DOP853
             method_solve<DOP853>(
                 // Common Inputs
-                diffeq_ptr, solution_ptr, t_start, t_end, y0_ptr, num_y,
+                diffeq_ptr, solution_ptr, t_start, t_end, y0_ptr, num_y, num_extra, args_ptr, max_num_steps, max_ram_MB,
                 // RK Inputs
-                capture_extra, num_extra, args_ptr, max_num_steps, max_ram_MB, rtol, atol, rtols_ptr, atols_ptr, max_step_size, first_step_size
+                rtol, atol, rtols_ptr, atols_ptr, max_step_size, first_step_size
             );
             break;
         default:

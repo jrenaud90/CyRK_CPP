@@ -17,7 +17,7 @@ protected:
     char message[MESSAGE_SIZE] { };
 
     // Metadata
-    int num_extra = 0;
+    unsigned int num_extra = 0;
     double num_dy_dbl = 0.0;
 
     // Current storage information
@@ -46,8 +46,8 @@ public:
     size_t size = 0;
 
     // Metadata
-    int num_y  = 0;
-    int num_dy = 0;
+    unsigned int num_y  = 0;
+    unsigned int num_dy = 0;
 
     // Pointer to storage arrays
     std::vector<double> time_domain;

@@ -5,7 +5,7 @@
 
 #include "cysolve.hpp"
 
-static void test_diffeq(double* dy_ptr, double time, double* y_ptr, double* args_ptr)
+static void test_diffeq(double* dy_ptr, double time, double* y_ptr, const double* args_ptr)
 {
     const double y0 = y_ptr[0];
     const double y1 = y_ptr[1];
@@ -21,7 +21,7 @@ int main(){
 
     double time_span[2] = {0.0, 500.0};
     double* time_span_ptr = &time_span[0];
-    int method = 1;
+    unsigned int method = 1;
     int max_i = 1000;
     
     double y0[2] = {20.0, 20.0};
@@ -29,7 +29,8 @@ int main(){
     char msg[512];
     char* msg_ptr = &msg[0];
 
-    int num_y = 2;
+    unsigned int num_y = 2;
+    unsigned int num_extra = 0;
 
     double rtol = 1.0e-7;
     double atol = 1.0e-8;
@@ -59,8 +60,7 @@ int main(){
                 num_y,
                 method,
                 expected_size,
-                false,
-                0,
+                num_extra,
                 nullptr,
                 100000,
                 2000,

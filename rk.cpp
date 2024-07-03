@@ -477,12 +477,12 @@ void RKSolver::p_step_implementation()
             default:
                 // Resort to rolled loops
                 // Initialize
-                /*temp_double = 0.0;
+                temp_double = 0.0;
 
                 for (size_t j = 0; j < this->n_stages; j++)
                 {
                     temp_double += this->B_ptr[j] * this->K_ptr[stride_K + j];
-                }*/
+                }
                 break;
             }
             // Update y_now

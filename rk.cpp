@@ -413,7 +413,7 @@ void RKSolver::p_step_implementation()
                     // Initialize
                     temp_double = 0.0;
 
-                    for (size_t j = 0; j < s; j++)
+                    for (unsigned int j = 0; j < s; j++)
                     {
                         temp_double += this->A_ptr[stride_A + j] * this->K_ptr[stride_K + j];
                     }
@@ -479,7 +479,7 @@ void RKSolver::p_step_implementation()
                 // Initialize
                 temp_double = 0.0;
 
-                for (size_t j = 0; j < this->n_stages; j++)
+                for (unsigned int j = 0; j < this->n_stages; j++)
                 {
                     temp_double += this->B_ptr[j] * this->K_ptr[stride_K + j];
                 }

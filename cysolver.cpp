@@ -270,6 +270,7 @@ int call_diffeq_from_cython(PyObject* x)
 }
 */
 
+
 /* PySolver Methods */
 void CySolverBase::set_cython_extension_instance(PyObject* cython_extension_class_instance)
 {

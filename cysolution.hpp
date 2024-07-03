@@ -7,39 +7,30 @@
 #include "common.hpp"
 
 
-class CySolverResult {
+inline void round_to_2(size_t& initital_value);
 
+class CySolverResult {
 
 // Attributes
 protected:
     // Message storage
-    char message[MESSAGE_SIZE];
+    char message[MESSAGE_SIZE] { };
 
     // Metadata
-    size_t num_extra = 0;
+    int num_extra = 0;
     double num_dy_dbl = 0.0;
 
     // Current storage information
     size_t original_expected_size = 0;
-    size_t storage_capacity = 0;
+    size_t storage_capacity       = 0;
 
     // Storage for arrays
     bool capture_extra = false;
 
 public:
-    // Metadata
-    size_t num_y = 0;
-    size_t num_dy = 0;
-
     // Status information
-    char* message_ptr = &this->message[0];
-    bool success = false;
+    bool success      = false;
     bool reset_called = false;
-    size_t size = 0;
-
-    // Pointer to storage arrays
-    std::vector<double> time_domain;
-    std::vector<double> solution;
 
     // Error codes
     // 0    : CySolverResult initialized. No error recorded.
@@ -47,7 +38,20 @@ public:
     // Error codes 1 to 10 and -1 to -10 are defined by CySolver. See the `take_step` method in the base class.
     // -11   : Value Error: Requested new vector size is larger than the limits set by the system (specifically the max of size_t).
     // -12   : Memory Error: Malloc failed when reserving more memory for vectors.
+    // -50   : Error calling cython wrapper function from PySolver.
     int error_code = -999;
+
+    // More status information
+    char* message_ptr = &message[0];
+    size_t size = 0;
+
+    // Metadata
+    int num_y  = 0;
+    int num_dy = 0;
+
+    // Pointer to storage arrays
+    std::vector<double> time_domain;
+    std::vector<double> solution;
 
 
 // Methods
@@ -56,9 +60,9 @@ protected:
 
 public:
     CySolverResult();
-    CySolverResult(size_t num_y, size_t num_extra, size_t expected_size);
+    CySolverResult(const int num_y, const int num_extra, const size_t expected_size);
     ~CySolverResult();
-    void save_data(double new_t, double* new_solution_y, double* new_solution_dy);
+    void save_data(const double new_t, double* const new_solution_y_ptr, double* const new_solution_dy_ptr);
     void reset();
-    void update_message(const char* new_message);
+    void update_message(const char* const new_message_ptr);
 };

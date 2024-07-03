@@ -6,16 +6,16 @@
 #include "cysolver.hpp"
 
 
-std::shared_ptr<CySolverResult> solve_ivp(
+std::shared_ptr<CySolverResult> cysolve_ivp(
     DiffeqFuncType diffeq_ptr,
     double* t_span_ptr,
     double* y0_ptr,
-    size_t num_y,
+    int num_y,
     int method,
     // General optional arguments
     size_t expected_size = 0,
     bool capture_extra = false,
-    size_t num_extra = 0,
+    int num_extra = 0,
     double* args_ptr = nullptr,
     // rk optional arguments
     size_t max_num_steps = 0,

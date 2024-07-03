@@ -6,18 +6,19 @@
 // Constructors
 RKSolver::RKSolver() {}
 RKSolver::RKSolver(
-        // Input variables
+        // Base Class input arguments
         DiffeqFuncType diffeq_ptr,
         std::shared_ptr<CySolverResult> storage_ptr,
         const double t_start,
         const double t_end,
         double* y0_ptr,
-        size_t num_y,
+        int num_y,
         bool capture_extra,
-        size_t num_extra,
+        int num_extra,
         double* args_ptr,
         size_t max_num_steps,
         size_t max_ram_MB,
+        // RKSolver input arguments
         double rtol,
         double atol,
         double* rtols_ptr,
@@ -50,7 +51,7 @@ RKSolver::RKSolver(
     {
         // rtol for each y
         use_array_rtols = true;
-        for (size_t y_i = 0; y_i < this->num_y; y_i++)
+        for (int y_i = 0; y_i < this->num_y; y_i++)
         {
             temp_double = rtols_ptr[y_i];
             if (temp_double < EPS_100)
@@ -76,7 +77,7 @@ RKSolver::RKSolver(
     {
         // atol for each y
         use_array_atols = true;
-        for (size_t y_i = 0; y_i < this->num_y; y_i++)
+        for (int y_i = 0; y_i < this->num_y; y_i++)
         {
             this->atols_ptr[y_i] = atols_ptr[y_i];
         }
@@ -112,7 +113,7 @@ inline void RKSolver::p_estimate_error()
 
     this->error_norm = 0.0;
 
-    for (size_t y_i = 0; y_i < this->num_y; y_i++)
+    for (int y_i = 0; y_i < this->num_y; y_i++)
     {
         if (this->use_array_rtols)
         {
@@ -259,7 +260,7 @@ void RKSolver::p_step_implementation()
             this->t_now = this->t_old + this->C_ptr[s] * this->step;
             stride_A = s * this->len_Acols;
 
-            for (size_t y_i = 0; y_i < this->num_y; y_i++)
+            for (int y_i = 0; y_i < this->num_y; y_i++)
             {
                 stride_K = y_i * this->n_stages_p1;
                 // Dot Product (K, a) * step
@@ -451,7 +452,7 @@ void RKSolver::p_step_implementation()
             this->diffeq();
 
             // Update K based on the new dy values.
-            for (size_t y_i = 0; y_i < this->num_y; y_i++) {
+            for (int y_i = 0; y_i < this->num_y; y_i++) {
                 stride_K = y_i * this->n_stages_p1;
                 this->K_ptr[stride_K + s] = this->dy_now_ptr[y_i];
             }
@@ -465,7 +466,7 @@ void RKSolver::p_step_implementation()
         {
         case(3):
             // RK23
-            for (size_t y_i = 0; y_i < this->num_y; y_i++)
+            for (int y_i = 0; y_i < this->num_y; y_i++)
             {
                 stride_K = y_i * this->n_stages_p1;
 
@@ -478,7 +479,7 @@ void RKSolver::p_step_implementation()
             break;
         case(6):
             //RK45
-            for (size_t y_i = 0; y_i < this->num_y; y_i++)
+            for (int y_i = 0; y_i < this->num_y; y_i++)
             {
                 stride_K = y_i * this->n_stages_p1;
 
@@ -494,7 +495,7 @@ void RKSolver::p_step_implementation()
             break;
         case(12):
             //DOP853
-            for (size_t y_i = 0; y_i < this->num_y; y_i++)
+            for (int y_i = 0; y_i < this->num_y; y_i++)
             {
                 stride_K = y_i * this->n_stages_p1;
 
@@ -516,7 +517,7 @@ void RKSolver::p_step_implementation()
             break;
         default:
             // Resort to unrolled loops
-            for (size_t y_i = 0; y_i < this->num_y; y_i++)
+            for (int y_i = 0; y_i < this->num_y; y_i++)
             {
                 stride_K = y_i * this->n_stages_p1;
 
@@ -583,7 +584,7 @@ void RKSolver::p_step_implementation()
     // End of RK step. 
     // Update "old" pointers
     this->t_old = t_now;
-    for (size_t y_i = 0; y_i < this->num_y; y_i++) {
+    for (int y_i = 0; y_i < this->num_y; y_i++) {
         this->y_old_ptr[y_i] = this->y_now_ptr[y_i];
         this->dy_old_ptr[y_i] = this->dy_now_ptr[y_i];
     }
@@ -612,7 +613,7 @@ void RKSolver::reset()
 
     size_t stride_K;
     // It is important to initialize the K variable with zeros
-    for (size_t y_i = 0; y_i < this->num_y; y_i++)
+    for (int y_i = 0; y_i < this->num_y; y_i++)
     {
         stride_K = y_i * this->n_stages_p1;
         for (size_t j = 0; j < this->n_stages_p1; j++)
@@ -646,7 +647,7 @@ void RKSolver::calc_first_step_size()
         // Find the norm for d0 and d1
         d0 = 0.0;
         d1 = 0.0;
-        for (size_t y_i = 0; y_i < this->num_y; y_i++)
+        for (int y_i = 0; y_i < this->num_y; y_i++)
         {
             y_old_tmp = this->y_old_ptr[y_i];
 
@@ -686,7 +687,7 @@ void RKSolver::calc_first_step_size()
         }
 
         this->t_now = this->t_old + h0_direction;
-        for (size_t y_i = 0; y_i < this->num_y; y_i++)
+        for (int y_i = 0; y_i < this->num_y; y_i++)
         {
             this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + h0_direction * this->dy_old_ptr[y_i];
         }
@@ -696,7 +697,7 @@ void RKSolver::calc_first_step_size()
 
         // Find the norm for d2
         d2 = 0.0;
-        for (size_t y_i = 0; y_i < this->num_y; y_i++)
+        for (int y_i = 0; y_i < this->num_y; y_i++)
         {
             if (this->use_array_rtols)
             {
@@ -817,7 +818,7 @@ void DOP853::p_estimate_error()
     double rtol = this->rtols_ptr[0];
     double atol = this->atols_ptr[0];
 
-    for (size_t y_i = 0; y_i < this->num_y; y_i++)
+    for (int y_i = 0; y_i < this->num_y; y_i++)
     {
         if (this->use_array_rtols)
         {

@@ -27,7 +27,7 @@ protected:
     // Dependent variables
     double num_y_dbl = 0.0;
     double num_y_sqrt = 0.0;
-    size_t num_dy = 0;
+    int num_dy = 0;
     // The size of the stack allocated tracking arrays is equal to the maximum allowed `num_y` (25).
     double y0[Y_LIMIT] = { 0.0 };
     double y_old[Y_LIMIT] = { 0.0 };
@@ -49,7 +49,7 @@ protected:
     DiffeqFuncType diffeq_ptr = nullptr;
 
     // Information on capturing extra information during integration.
-    size_t num_extra = 0;
+    int num_extra = 0;
 
     // Keep bools together to reduce size
     bool direction_flag = false;
@@ -62,7 +62,7 @@ public:
     int status = -999;
 
     // Meta data
-    size_t num_y = 0;
+    int num_y = 0;
 
     // Result storage
     std::shared_ptr<CySolverResult> storage_ptr = nullptr;
@@ -77,7 +77,6 @@ public:
 // Methods
 protected:
     virtual void p_step_implementation();
-    inline void c_diffeq();
 
 public:
     CySolverBase();
@@ -89,9 +88,9 @@ public:
         const double t_start,
         const double t_end,
         double* y0_ptr,
-        size_t num_y,
+        int num_y,
         bool capture_extra = false,
-        size_t num_extra = 0,
+        int num_extra = 0,
         double* args_ptr = nullptr,
         size_t max_num_steps = 0,
         size_t max_ram_MB = 2000

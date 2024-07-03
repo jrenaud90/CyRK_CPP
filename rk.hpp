@@ -432,18 +432,19 @@ public:
     RKSolver();
     virtual ~RKSolver() override;
     RKSolver(
-        // Input variables
+        // Base Class input arguments
         DiffeqFuncType diffeq_ptr,
         std::shared_ptr<CySolverResult> storage_ptr,
         const double t_start,
         const double t_end,
         double* y0_ptr,
-        size_t num_y,
+        int num_y,
         bool capture_extra = false,
-        size_t num_extra = 0,
+        int num_extra = 0,
         double* args_ptr = nullptr,
         size_t max_num_steps = 0,
         size_t max_ram_MB = 2000,
+        // RKSolver input arguments
         double rtol = 1.0e-3,
         double atol = 1.0e-6,
         double* rtols_ptr = nullptr,

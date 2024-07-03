@@ -9,9 +9,9 @@ CySolverBase::CySolverBase(
         const double t_start,
         const double t_end,
         double* y0_ptr,
-        size_t num_y,
+        int num_y,
         bool capture_extra,
-        size_t num_extra,
+        int num_extra,
         double* args_ptr,
         size_t max_num_steps,
         size_t max_ram_MB)
@@ -71,7 +71,7 @@ CySolverBase::CySolverBase(
     this->num_y_sqrt = std::sqrt(this->num_y_dbl);
     this->num_dy     = this->num_y + this->num_extra;
     // Make a copy of y0
-    for (size_t y_i = 0; y_i < this->num_y; y_i++)
+    for (int y_i = 0; y_i < this->num_y; y_i++)
     {
         this->y0_ptr[y_i] = y0_ptr[y_i];
     }
@@ -141,18 +141,9 @@ bool CySolverBase::check_status()
     return true;
 }
 
-
-inline void CySolverBase::c_diffeq()
-{
-    /* Function to call pure c-based differential equation (provided by the user) */
-
-    this->diffeq_ptr(this->dy_now_ptr, this->t_now, this->y_now_ptr, this->args_ptr);
-}
-
 void CySolverBase::diffeq()
 {
-    /* Wrapper that can be overriden by subclasses. In the base class it will call the pure-c based, user-provided diffeq. */
-    this->c_diffeq();
+    this->diffeq_ptr(this->dy_now_ptr, this->t_now, this->y_now_ptr, this->args_ptr);
 }
 
 void CySolverBase::reset()
@@ -168,7 +159,7 @@ void CySolverBase::reset()
     this->len_t = 1;
 
     // Reset ys
-    for (size_t y_i = 0; y_i < this->num_y; y_i++)
+    for (int y_i = 0; y_i < this->num_y; y_i++)
     {
         temp_double = this->y0_ptr[y_i];
         this->y_now_ptr[y_i] = temp_double;
@@ -179,7 +170,7 @@ void CySolverBase::reset()
     this->diffeq();
 
     // Update dys
-    for (size_t dy_i = 0; dy_i < this->num_dy; dy_i++)
+    for (int dy_i = 0; dy_i < this->num_dy; dy_i++)
     {
         this->dy_old_ptr[dy_i] = this->dy_now_ptr[dy_i];
     }

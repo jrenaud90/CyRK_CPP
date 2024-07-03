@@ -29,7 +29,7 @@ int main(){
     char msg[512];
     char* msg_ptr = &msg[0];
 
-    size_t num_y = 2;
+    int num_y = 2;
 
     double rtol = 1.0e-7;
     double atol = 1.0e-8;
@@ -52,7 +52,7 @@ int main(){
         {
 
             t1 = std::chrono::high_resolution_clock::now();
-            result = solve_ivp(
+            result = cysolve_ivp(
                 diffeq_func,
                 time_span_ptr,
                 y0_ptr,
@@ -69,7 +69,7 @@ int main(){
             );
 
             final_size = result->size;
-            std::strcpy(msg_ptr, result->message_ptr);
+            //std::cout << result->message_ptr << std::endl;
             sol_size = final_size * 2;
 
             t2 = std::chrono::high_resolution_clock::now();

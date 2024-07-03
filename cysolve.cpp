@@ -8,10 +8,10 @@ void method_solve(
         const double t_start,
         const double t_end,
         double* y0_ptr,
-        size_t num_y,
+        int num_y,
         // General optional arguments
         bool capture_extra,
-        size_t num_extra,
+        int num_extra,
         double* args_ptr,
         // rk optional arguments
         size_t max_num_steps,
@@ -39,16 +39,16 @@ void method_solve(
 }
 
 
-std::shared_ptr<CySolverResult> solve_ivp(
+std::shared_ptr<CySolverResult> cysolve_ivp(
         DiffeqFuncType diffeq_ptr,
         double* t_span_ptr,
         double* y0_ptr,
-        size_t num_y,
+        int num_y,
         int method,
         // General optional arguments
         size_t expected_size,
         bool capture_extra,
-        size_t num_extra,
+        int num_extra,
         double* args_ptr,
         // rk optional arguments
         size_t max_num_steps,

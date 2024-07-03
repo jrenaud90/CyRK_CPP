@@ -127,8 +127,6 @@ void CySolverBase::diffeq()
 
 void CySolverBase::reset()
 {
-    double temp_double;
-
     this->status = 0;
     this->reset_called = false;
 

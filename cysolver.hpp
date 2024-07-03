@@ -1,8 +1,6 @@
 #pragma once
 
-#include <cmath>
 #include <cstring>
-#include <cstdio>
 
 #include <memory>
 

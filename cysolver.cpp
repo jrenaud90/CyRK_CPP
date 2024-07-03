@@ -94,14 +94,14 @@ CySolverBase::CySolverBase(
     }
 
     // Parse maximum number of steps
-    find_max_num_steps(
+    MaxNumStepsOutput max_num_steps_output = find_max_num_steps(
         this->num_y,
         num_extra,
         max_num_steps,
-        max_ram_MB,
-        capture_extra,
-        &this->user_provided_max_num_steps,
-        &this->max_num_steps);
+        max_ram_MB
+    );
+    this->user_provided_max_num_steps = max_num_steps_output.user_provided_max_num_steps;
+    this->max_num_steps = max_num_steps_output.max_num_steps;
 }
 
 

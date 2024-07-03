@@ -6,8 +6,8 @@
 
 #include <memory>
 
-#include "cysolution.hpp"
 #include "common.hpp"
+#include "cysolution.hpp"
 
 class CySolverBase {
 

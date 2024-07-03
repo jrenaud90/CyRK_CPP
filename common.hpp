@@ -40,18 +40,28 @@ const double SIZE_MAX_DBL = 0.99 * SIZE_MAX;
 
 typedef void (*DiffeqFuncType)(double*, double, double*, double*);
 
-void find_max_num_steps(
-    size_t num_y,
-    size_t num_extra,
-    size_t max_num_steps,
-    size_t max_ram_MB,
-    bool capture_extra,
-    bool* user_provided_max_num_steps,
-    size_t* max_num_steps_touse);
+
+struct MaxNumStepsOutput
+{
+    bool user_provided_max_num_steps;
+    size_t max_num_steps;
+
+    MaxNumStepsOutput(bool user_provided, size_t max_steps) :
+        user_provided_max_num_steps(user_provided),
+        max_num_steps(max_steps) { };
+};
+
+
+MaxNumStepsOutput find_max_num_steps(
+    const int num_y,
+    const int num_extra,
+    const size_t max_num_steps,
+    const size_t max_ram_MB);
+
 
 size_t find_expected_size(
-    size_t num_y,
-    size_t num_extra,
+    int num_y,
+    int num_extra,
     double t_delta_abs,
     double rtol_min,
     bool capture_extra);

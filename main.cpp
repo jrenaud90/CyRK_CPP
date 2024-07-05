@@ -17,9 +17,10 @@ static void test_diffeq(double* dy_ptr, double time, double* y_ptr, const double
 int main(){
     //std::cout << "Running..." << std::endl;
 
+
     DiffeqFuncType diffeq_func = test_diffeq;
 
-    double time_span[2] = {0.0, 500.0};
+    double time_span[2] = {3.0, 500.0};
     double* time_span_ptr = &time_span[0];
     unsigned int method = 1;
     int max_i = 1000;
@@ -40,7 +41,41 @@ int main(){
     double running_sum = 0.0;
     size_t final_size;
     size_t sol_size;
+
+
+    std::shared_ptr<CySolverResult> result2 = std::make_shared<CySolverResult>(num_y, num_extra, expected_size);
+   
+    PySolver pysolve2 = PySolver(
+        1,
+        // Cython class instance used for pyhook
+        nullptr,
+        // Regular integrator inputs
+        result2,
+        time_span_ptr[0],
+        time_span_ptr[1],
+        y0_ptr,
+        num_y,
+        // General optional arguments
+        num_extra,
+        nullptr,
+        // rk optional arguments
+        1000000,
+        2000,
+        rtol,
+        atol,
+        nullptr,
+        nullptr,
+        1000000,
+        0.0);
+
+    pysolve2.solver->reset();
+
+    std::cout << "STATE POINTERS:: " << *pysolve2.state_pointers.dy_now_ptr << "; " << *pysolve2.state_pointers.t_now_ptr << "; " << *pysolve2.state_pointers.y_now_ptr << std::endl;
+    
+    std::cin.get();
+
     std::shared_ptr<CySolverResult> result;
+
     auto t1 = std::chrono::high_resolution_clock::now();
     auto t2 = std::chrono::high_resolution_clock::now();
     int k = 0;

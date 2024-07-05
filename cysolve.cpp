@@ -144,12 +144,19 @@ std::shared_ptr<CySolverResult> cysolve_ivp(
 
 
 /* Pure Python hook solvers and helpers */
-template <typename IntegratorType>
-PySolver<IntegratorType>::PySolver() { }
-template <typename IntegratorType>
-PySolver<IntegratorType>::PySolver(
+PySolver::PySolver() { }
+PySolver::~PySolver()
+{
+    if (this->solver)
+    {
+        delete this->solver;
+    }
+}
+PySolver::PySolver(
+    unsigned int integration_method,
     // Cython class instance used for pyhook
     PyObject* cython_extension_class_instance,
+    // Regular integrator inputs
     std::shared_ptr<CySolverResult> solution_ptr,
     const double t_start,
     const double t_end,
@@ -166,29 +173,105 @@ PySolver<IntegratorType>::PySolver(
     const double* rtols_ptr,
     const double* atols_ptr,
     const double max_step_size,
-    const double first_step_size)
-{
-    // Create dummer diffeq pointer (this is unused)
-    DiffeqFuncType diffeq_ptr = nullptr;
+    const double first_step_size) :
+        integration_method(integration_method)
 
-    // Construct solver based on type
-    this->solver = IntegratorType(
-        // Common Inputs
-        diffeq_ptr, solution_ptr, t_start, t_end, y0_ptr, num_y, num_extra, args_ptr, max_num_steps, max_ram_MB,
-        // RK Inputs
-        rtol, atol, rtols_ptr, atols_ptr, max_step_size, first_step_size
-    );
+{   
+    // Save reference to solution pointer
+    this->solution_ptr = solution_ptr;
+
+    // Need a fake diffeq pointer (this is unused in python-based solver
+    DiffeqFuncType diffeq_ptr = nullptr;
+    
+
+    switch (this->integration_method)
+    {
+    case 0:
+        // RK23
+        this->solver = new RK23(diffeq_ptr,
+            solution_ptr,
+            t_start,
+            t_end,
+            y0_ptr,
+            num_y,
+            // General optional arguments
+            num_extra,
+            args_ptr,
+            // rk optional arguments
+            max_num_steps,
+            max_ram_MB,
+            rtol,
+            atol,
+            rtols_ptr,
+            atols_ptr,
+            max_step_size,
+            first_step_size);
+        break;
+    case 1:
+        // RK45
+        this->solver = new RK45(diffeq_ptr,
+            solution_ptr,
+            t_start,
+            t_end,
+            y0_ptr,
+            num_y,
+            // General optional arguments
+            num_extra,
+            args_ptr,
+            // rk optional arguments
+            max_num_steps,
+            max_ram_MB,
+            rtol,
+            atol,
+            rtols_ptr,
+            atols_ptr,
+            max_step_size,
+            first_step_size);
+        break;
+    case 2:
+        // DOP853
+        this->solver = new DOP853(diffeq_ptr,
+            solution_ptr,
+            t_start,
+            t_end,
+            y0_ptr,
+            num_y,
+            // General optional arguments
+            num_extra,
+            args_ptr,
+            // rk optional arguments
+            max_num_steps,
+            max_ram_MB,
+            rtol,
+            atol,
+            rtols_ptr,
+            atols_ptr,
+            max_step_size,
+            first_step_size);
+        break;
+    default:
+        break;
+    }
 
     // Add in python hooks
-    this->solver.set_cython_extension_instance(cython_extension_class_instance);
+    this->solver->set_cython_extension_instance(cython_extension_class_instance);
+
+    // Install solver's state pointers
+    this->state_pointers = PySolverStatePointers(this->solver->dy_now_ptr, &this->solver->t_now, this->solver->y_now_ptr);
+    
+};
+
+
+PySolverStatePointers PySolver::get_state_pointers() const
+{
+    return this->state_pointers;
 }
 
-template <typename IntegratorType>
-void PySolver<IntegratorType>::solve()
-{
 
+void PySolver::solve()
+{
     // Run integrator
-    this->solver.solve();
+    this->solver->solve();
 
     // Finalize solution storage
     this->solution_ptr->finalize();

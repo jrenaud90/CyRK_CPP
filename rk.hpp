@@ -426,7 +426,7 @@ protected:
 
 // Methods
 protected:
-    virtual inline void p_estimate_error();
+    virtual void p_estimate_error() override;
     virtual void p_step_implementation() override;
 
 public:
@@ -453,7 +453,7 @@ public:
         const double first_step_size = 0.0
     );
     virtual void reset() override;
-    void calc_first_step_size();
+    virtual void calc_first_step_size() override;
 };
 
 

@@ -22,6 +22,39 @@ typedef _object PyObject;
 
 class CySolverBase {
 
+// Methods
+protected:
+    virtual void p_estimate_error() { };
+    virtual void p_step_implementation();
+
+public:
+    CySolverBase();
+    virtual ~CySolverBase();
+    CySolverBase(
+        // Input variables
+        DiffeqFuncType diffeq_ptr,
+        std::shared_ptr<CySolverResult> const storage_ptr,
+        const double t_start,
+        const double t_end,
+        const double* const y0_ptr,
+        const unsigned int num_y,
+        const unsigned int num_extra = 0,
+        const double* const args_ptr = nullptr,
+        const size_t max_num_steps = 0,
+        const size_t max_ram_MB = 2000
+    );
+
+    bool check_status() const;
+    virtual void reset();
+    void diffeq();
+    void take_step();
+    void change_storage(std::shared_ptr<CySolverResult> new_storage_ptr, bool auto_reset = true);
+    virtual void calc_first_step_size() { };
+
+    // PySolver methods
+    void set_cython_extension_instance(PyObject* cython_extension_class_instance);
+    void py_diffeq();
+    void solve();
 
 // Attributes
 protected:
@@ -76,7 +109,7 @@ public:
     unsigned int num_y = 0;
 
     // Result storage
-    std::shared_ptr<CySolverResult> storage_ptr = nullptr;
+    std::shared_ptr<CySolverResult> storage_ptr = std::make_shared<CySolverResult>();
 
     // State attributes
     size_t len_t = 0;
@@ -88,36 +121,4 @@ public:
     bool use_pysolver = false;
     PyObject* cython_extension_class_instance = nullptr;
 
-
-// Methods
-protected:
-    virtual void p_step_implementation();
-
-public:
-    CySolverBase();
-    virtual ~CySolverBase();
-    CySolverBase(
-        // Input variables
-        DiffeqFuncType diffeq_ptr,
-        std::shared_ptr<CySolverResult> const storage_ptr,
-        const double t_start,
-        const double t_end,
-        const double* const y0_ptr,
-        const unsigned int num_y,
-        const unsigned int num_extra = 0,
-        const double* const args_ptr = nullptr,
-        const size_t max_num_steps = 0,
-        const size_t max_ram_MB = 2000
-    );
-    
-    bool check_status() const;
-    virtual void reset();
-    void diffeq();
-    void take_step();
-    void change_storage(std::shared_ptr<CySolverResult> new_storage_ptr, bool auto_reset = true);
-
-    // PySolver methods
-    void set_cython_extension_instance(PyObject* cython_extension_class_instance);
-    void py_diffeq();
-    void solve();
 };

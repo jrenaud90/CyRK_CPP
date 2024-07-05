@@ -14,11 +14,11 @@ class CySolverResult {
 // Attributes
 protected:
     // Message storage
-    char message[MESSAGE_SIZE] { };
+    char message[MESSAGE_SIZE] = { };
 
     // Metadata
     unsigned int num_extra = 0;
-    double num_dy_dbl = 0.0;
+    double num_dy_dbl      = 0.0;
 
     // Current storage information
     size_t original_expected_size = 0;
@@ -29,8 +29,8 @@ protected:
 
     // Buffer
     unsigned int current_buffer_size = 0;
-    double* data_buffer_time_ptr = &data_buffer_time[0];
-    double* data_buffer_y_ptr = &data_buffer_y[0];
+    double* data_buffer_time_ptr     = &data_buffer_time[0];
+    double* data_buffer_y_ptr        = &data_buffer_y[0];
 
 public:
     // Status information
@@ -55,13 +55,13 @@ public:
     unsigned int num_dy   = 0;
 
     // Pointer to storage arrays
-    std::vector<double> time_domain;
-    std::vector<double> solution;
+    std::vector<double> time_domain = std::vector<double>(0);
+    std::vector<double> solution = std::vector<double>(0);
 
 private:
     // Put data buffers at the end of memory stack
-    double data_buffer_time[BUFFER_SIZE];
-    double data_buffer_y[BUFFER_SIZE * DY_LIMIT];
+    double data_buffer_time[BUFFER_SIZE] = {};
+    double data_buffer_y[BUFFER_SIZE * DY_LIMIT] = {};
 
 // Methods
 protected:

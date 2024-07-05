@@ -52,16 +52,33 @@ std::shared_ptr<CySolverResult> cysolve_ivp(
 
 
 /* Pure Python hook solvers and helpers */
-template <typename IntegratorType>
+struct PySolverStatePointers
+{
+    double* dy_now_ptr;
+    double* t_now_ptr;
+    double* y_now_ptr;
+    PySolverStatePointers() :
+        dy_now_ptr(nullptr), t_now_ptr(nullptr), y_now_ptr(nullptr) {};
+    PySolverStatePointers(double* dy_now_ptr, double* t_now_ptr, double* y_now_ptr) :
+        dy_now_ptr(dy_now_ptr), t_now_ptr(t_now_ptr), y_now_ptr(y_now_ptr) {};
+};
+
 class PySolver
 {
 public:
-    IntegratorType solver;
+    CySolverBase* solver;
+    std::shared_ptr<CySolverResult> solution_ptr = std::make_shared<CySolverResult>();
+    unsigned int integration_method = 1;
+    PySolverStatePointers state_pointers = PySolverStatePointers();
+
 public:
     PySolver();
+    ~PySolver();
     PySolver(
+        unsigned int integration_method,
         // Cython class instance used for pyhook
         PyObject* cython_extension_class_instance,
+        // Regular integrator inputs
         std::shared_ptr<CySolverResult> solution_ptr,
         const double t_start,
         const double t_end,
@@ -80,5 +97,6 @@ public:
         const double max_step_size,
         const double first_step_size
     );
+    PySolverStatePointers get_state_pointers() const;
     void solve();
 };

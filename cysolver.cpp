@@ -87,7 +87,7 @@ CySolverBase::CySolverBase(
 // Destructors
 CySolverBase::~CySolverBase()
 {
-    this->storage_ptr = nullptr;
+    //this->storage_ptr = nullptr;
 }
 
 
@@ -155,7 +155,7 @@ void CySolverBase::reset()
     // Update dys
     std::memcpy(this->dy_old_ptr, this->dy_now_ptr, sizeof(double) * this->num_y);
 
-    // Inititialize storage
+    // Initialize storage
     this->storage_ptr->reset();
     this->storage_ptr->update_message("CySolverStorage reset, ready for data.");
 
@@ -293,10 +293,10 @@ void Py_XINCREF(PyObject* x)
 
 void CySolverBase::set_cython_extension_instance(PyObject* cython_extension_class_instance)
 {
+    this->use_pysolver = true;
     if (cython_extension_class_instance)
     {
         this->cython_extension_class_instance = cython_extension_class_instance;
-        this->use_pysolver = true;
 
         // Import the cython/python module (functionality provided by "pysolver_api.h")
         if (import_CyRK__cy__pysolver_cyhook())

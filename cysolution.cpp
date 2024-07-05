@@ -166,6 +166,12 @@ void CySolverResult::finalize()
     // Shrink vectors
     this->time_domain.shrink_to_fit();
     this->solution.shrink_to_fit();
+
+    // Check if the integrator finished
+    if (this->error_code == 1)
+    {
+        this->success = true;
+    }
 }
 
 void CySolverResult::update_message(const char* const new_message_ptr)

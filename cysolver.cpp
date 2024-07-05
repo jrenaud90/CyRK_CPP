@@ -204,11 +204,13 @@ void CySolverBase::take_step()
         }
     }
 
+    // Note this is not an "else" block because the integrator may have finished with that last step.
     // Check status again to see if we are finished or there was an error in the last step
     if (this->status != 0)
     {
         // Update integration message
         this->storage_ptr->error_code = this->status;
+        this->storage_ptr->success    = false;
         switch (this->status)
         {
         case 2:
@@ -216,6 +218,7 @@ void CySolverBase::take_step()
             break;
         case 1:
             this->storage_ptr->update_message("Integration completed without issue.\n");
+            this->storage_ptr->success = true;
             break;
         case -1:
             this->storage_ptr->update_message("Error in step size calculation:\n\tRequired step size is less than spacing between numbers.\n");
@@ -236,6 +239,9 @@ void CySolverBase::take_step()
             this->storage_ptr->update_message("Unknown status encountered during integration.\n");
             break;
         }
+        
+        // Call the finalizer on the storage class instance
+        this->storage_ptr->finalize();
     }
 }
 
@@ -256,6 +262,17 @@ void CySolverBase::change_storage(std::shared_ptr<CySolverResult> new_storage_pt
 }
 
 
+// Main Solve Method!
+void CySolverBase::solve()
+{
+    while (this->check_status())
+    {
+        this->take_step();
+    }
+}
+
+
+/* PySolver Methods */
 // !!!
 // Uncomment these dummy methods if working outside of CyRK and you just want the program to compile and run for testing/developing the C++ only code.
 /*
@@ -268,10 +285,12 @@ int call_diffeq_from_cython(PyObject* x)
 {
     return 1;
 }
+
+void Py_XINCREF(PyObject* x)
+{
+}
 */
 
-
-/* PySolver Methods */
 void CySolverBase::set_cython_extension_instance(PyObject* cython_extension_class_instance)
 {
     if (cython_extension_class_instance)
@@ -293,7 +312,10 @@ void CySolverBase::set_cython_extension_instance(PyObject* cython_extension_clas
 
 void CySolverBase::py_diffeq()
 {
+    // Call the differential equation in python space. Note that the optional arguments are handled by the python 
+    // wrapper class. `this->args_ptr` is not used.
     int diffeq_status = call_diffeq_from_cython(this->cython_extension_class_instance);
+
     if (diffeq_status < 0)
     {
         this->status = -50;

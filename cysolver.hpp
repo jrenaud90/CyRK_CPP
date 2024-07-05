@@ -4,8 +4,6 @@
 
 #include <memory>
 
-#include <Python.h>
-
 #include "common.hpp"
 #include "cysolution.hpp"
 
@@ -16,6 +14,7 @@
 // Read more about how C++ can call python functions here:
 // https://stackoverflow.com/questions/10126668/can-i-override-a-c-virtual-function-within-python-with-cython
 // and here: https://github.com/dashesy/pyavfcam/blob/master/src/avf.pyx#L27
+#include <Python.h>
 #include "pysolver_cyhook_api.h"
 
 struct _object;
@@ -82,7 +81,7 @@ public:
     // State attributes
     size_t len_t = 0;
     double t_now = 0.0;
-    double* y_now_ptr = &y_now[0];
+    double* y_now_ptr  = &y_now[0];
     double* dy_now_ptr = &dy_now[0];
 
     // PySolver Attributes
@@ -120,4 +119,5 @@ public:
     // PySolver methods
     void set_cython_extension_instance(PyObject* cython_extension_class_instance);
     void py_diffeq();
+    void solve();
 };

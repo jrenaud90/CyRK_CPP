@@ -69,6 +69,7 @@ int main(){
             );
 
             final_size = result->size;
+            msg_ptr = result->message_ptr;
             //std::cout << result->message_ptr << std::endl;
             sol_size = final_size * 2;
 

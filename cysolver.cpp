@@ -275,7 +275,7 @@ void CySolverBase::solve()
 /* PySolver Methods */
 // !!!
 // Uncomment these dummy methods if working outside of CyRK and you just want the program to compile and run for testing/developing the C++ only code.
-/*
+
 bool import_CyRK__cy__pysolver_cyhook()
 {
     return true;
@@ -289,7 +289,7 @@ int call_diffeq_from_cython(PyObject* x)
 void Py_XINCREF(PyObject* x)
 {
 }
-*/
+
 
 void CySolverBase::set_cython_extension_instance(PyObject* cython_extension_class_instance)
 {

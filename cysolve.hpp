@@ -6,32 +6,10 @@
 #include "rk.hpp"
 #include "cysolver.hpp"
 
+/* Pure C++ / Cython solvers and helpers */
 template <typename IntegratorType>
 void find_cysolver_and_solve(
     DiffeqFuncType diffeq_ptr,
-    std::shared_ptr<CySolverResult> solution_ptr,
-    const double t_start,
-    const double t_end,
-    const double* y0_ptr,
-    const unsigned int num_y,
-    // General optional arguments
-    const unsigned int num_extra,
-    const double* args_ptr,
-    // rk optional arguments
-    const size_t max_num_steps,
-    const size_t max_ram_MB,
-    const double rtol,
-    const double atol,
-    const double* rtols_ptr,
-    const double* atols_ptr,
-    const double max_step_size,
-    const double first_step_size
-);
-
-template <typename IntegratorType>
-void find_pysolver_and_solve(
-    // Cython class instance used for pyhook
-    PyObject* cython_extension_class_instance,
     std::shared_ptr<CySolverResult> solution_ptr,
     const double t_start,
     const double t_end,
@@ -71,3 +49,36 @@ std::shared_ptr<CySolverResult> cysolve_ivp(
     const double max_step_size = MAX_STEP,
     const double first_step_size = 0.0
 );
+
+
+/* Pure Python hook solvers and helpers */
+template <typename IntegratorType>
+class PySolver
+{
+public:
+    IntegratorType solver;
+public:
+    PySolver();
+    PySolver(
+        // Cython class instance used for pyhook
+        PyObject* cython_extension_class_instance,
+        std::shared_ptr<CySolverResult> solution_ptr,
+        const double t_start,
+        const double t_end,
+        const double* y0_ptr,
+        const unsigned int num_y,
+        // General optional arguments
+        const unsigned int num_extra,
+        const double* args_ptr,
+        // rk optional arguments
+        const size_t max_num_steps,
+        const size_t max_ram_MB,
+        const double rtol,
+        const double atol,
+        const double* rtols_ptr,
+        const double* atols_ptr,
+        const double max_step_size,
+        const double first_step_size
+    );
+    void solve();
+};

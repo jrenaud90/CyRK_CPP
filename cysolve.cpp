@@ -1,45 +1,10 @@
 #include "cysolve.hpp"
 
+
+/* Pure C++ / Cython solvers and helpers */
 template <typename IntegratorType>
 void find_cysolver_and_solve(
-        DiffeqFuncType diffeq_ptr,
-        std::shared_ptr<CySolverResult> solution_ptr,
-        const double t_start,
-        const double t_end,
-        const double* y0_ptr,
-        const unsigned int num_y,
-        // General optional arguments
-        const unsigned int num_extra,
-        const double* args_ptr,
-        // rk optional arguments
-        const size_t max_num_steps,
-        const size_t max_ram_MB,
-        const double rtol,
-        const double atol,
-        const double* rtols_ptr,
-        const double* atols_ptr,
-        const double max_step_size,
-        const double first_step_size)
-{
-    // Construct solver based on type
-    IntegratorType solver = IntegratorType(
-        // Common Inputs
-        diffeq_ptr, solution_ptr, t_start, t_end, y0_ptr, num_y, num_extra, args_ptr, max_num_steps, max_ram_MB,
-        // RK Inputs
-        rtol, atol, rtols_ptr, atols_ptr, max_step_size, first_step_size
-    );
-
-    // Run integrator
-    solver.solve();
-
-    // Finalize solution storage
-    solution_ptr->finalize();
-}
-
-template <typename IntegratorType>
-void find_pysolver_and_solve(
-    // Cython class instance used for pyhook
-    PyObject* cython_extension_class_instance,
+    DiffeqFuncType diffeq_ptr,
     std::shared_ptr<CySolverResult> solution_ptr,
     const double t_start,
     const double t_end,
@@ -58,9 +23,6 @@ void find_pysolver_and_solve(
     const double max_step_size,
     const double first_step_size)
 {
-    // Create dummer diffeq pointer (this is unused)
-    DiffeqFuncType diffeq_ptr = nullptr;
-
     // Construct solver based on type
     IntegratorType solver = IntegratorType(
         // Common Inputs
@@ -68,9 +30,6 @@ void find_pysolver_and_solve(
         // RK Inputs
         rtol, atol, rtols_ptr, atols_ptr, max_step_size, first_step_size
     );
-
-    // Add in python hooks
-    solver.set_cython_extension_instance(cython_extension_class_instance);
 
     // Run integrator
     solver.solve();
@@ -80,37 +39,37 @@ void find_pysolver_and_solve(
 }
 
 std::shared_ptr<CySolverResult> cysolve_ivp(
-        DiffeqFuncType diffeq_ptr,
-        const double* t_span_ptr,
-        const double* y0_ptr,
-        const unsigned int num_y,
-        const unsigned int method,
-        // General optional arguments
-        const size_t expected_size,
-        const unsigned int num_extra,
-        const double* args_ptr,
-        // rk optional arguments
-        const size_t max_num_steps,
-        const size_t max_ram_MB,
-        const double rtol,
-        const double atol,
-        const double* rtols_ptr,
-        const double* atols_ptr,
-        const double max_step_size,
-        const double first_step_size
-        )
+    DiffeqFuncType diffeq_ptr,
+    const double* t_span_ptr,
+    const double* y0_ptr,
+    const unsigned int num_y,
+    const unsigned int method,
+    // General optional arguments
+    const size_t expected_size,
+    const unsigned int num_extra,
+    const double* args_ptr,
+    // rk optional arguments
+    const size_t max_num_steps,
+    const size_t max_ram_MB,
+    const double rtol,
+    const double atol,
+    const double* rtols_ptr,
+    const double* atols_ptr,
+    const double max_step_size,
+    const double first_step_size
+)
 {
     // State parameters
     bool error = false;
 
     // Parse input
     const double t_start = t_span_ptr[0];
-    const double t_end   = t_span_ptr[1];
+    const double t_end = t_span_ptr[1];
 
     // Get new expected size
     size_t expected_size_touse = expected_size;
     if (expected_size_touse == 0)
-    {   
+    {
         double min_rtol = INF;
         if (rtols_ptr)
         {
@@ -138,7 +97,7 @@ std::shared_ptr<CySolverResult> cysolve_ivp(
     }
 
     // Build classes
-    std::shared_ptr<CySolverResult> solution_ptr = 
+    std::shared_ptr<CySolverResult> solution_ptr =
         std::make_shared<CySolverResult>(num_y, num_extra, expected_size_touse);
 
 
@@ -181,4 +140,56 @@ std::shared_ptr<CySolverResult> cysolve_ivp(
 
     // Return the results
     return solution_ptr;
+}
+
+
+/* Pure Python hook solvers and helpers */
+template <typename IntegratorType>
+PySolver<IntegratorType>::PySolver() { }
+template <typename IntegratorType>
+PySolver<IntegratorType>::PySolver(
+    // Cython class instance used for pyhook
+    PyObject* cython_extension_class_instance,
+    std::shared_ptr<CySolverResult> solution_ptr,
+    const double t_start,
+    const double t_end,
+    const double* y0_ptr,
+    const unsigned int num_y,
+    // General optional arguments
+    const unsigned int num_extra,
+    const double* args_ptr,
+    // rk optional arguments
+    const size_t max_num_steps,
+    const size_t max_ram_MB,
+    const double rtol,
+    const double atol,
+    const double* rtols_ptr,
+    const double* atols_ptr,
+    const double max_step_size,
+    const double first_step_size)
+{
+    // Create dummer diffeq pointer (this is unused)
+    DiffeqFuncType diffeq_ptr = nullptr;
+
+    // Construct solver based on type
+    this->solver = IntegratorType(
+        // Common Inputs
+        diffeq_ptr, solution_ptr, t_start, t_end, y0_ptr, num_y, num_extra, args_ptr, max_num_steps, max_ram_MB,
+        // RK Inputs
+        rtol, atol, rtols_ptr, atols_ptr, max_step_size, first_step_size
+    );
+
+    // Add in python hooks
+    this->solver.set_cython_extension_instance(cython_extension_class_instance);
+}
+
+template <typename IntegratorType>
+void PySolver<IntegratorType>::solve()
+{
+
+    // Run integrator
+    this->solver.solve();
+
+    // Finalize solution storage
+    this->solution_ptr->finalize();
 }

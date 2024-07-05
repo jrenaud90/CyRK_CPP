@@ -14,8 +14,8 @@
 // Read more about how C++ can call python functions here:
 // https://stackoverflow.com/questions/10126668/can-i-override-a-c-virtual-function-within-python-with-cython
 // and here: https://github.com/dashesy/pyavfcam/blob/master/src/avf.pyx#L27
-#include <Python.h>
-#include "pysolver_cyhook_api.h"
+//#include <Python.h>
+//#include "pysolver_cyhook_api.h"
 
 struct _object;
 typedef _object PyObject;

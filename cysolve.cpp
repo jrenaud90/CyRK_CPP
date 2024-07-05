@@ -1,6 +1,6 @@
 #include "cysolve.hpp"
 
-template <typename T>
+template <typename IntegratorType>
 void find_cysolver_and_solve(
         DiffeqFuncType diffeq_ptr,
         std::shared_ptr<CySolverResult> solution_ptr,
@@ -22,7 +22,7 @@ void find_cysolver_and_solve(
         const double first_step_size)
 {
     // Construct solver based on type
-    T solver = T(
+    IntegratorType solver = IntegratorType(
         // Common Inputs
         diffeq_ptr, solution_ptr, t_start, t_end, y0_ptr, num_y, num_extra, args_ptr, max_num_steps, max_ram_MB,
         // RK Inputs
@@ -36,7 +36,7 @@ void find_cysolver_and_solve(
     solution_ptr->finalize();
 }
 
-template <typename T>
+template <typename IntegratorType>
 void find_pysolver_and_solve(
     // Cython class instance used for pyhook
     PyObject* cython_extension_class_instance,
@@ -62,7 +62,7 @@ void find_pysolver_and_solve(
     DiffeqFuncType diffeq_ptr = nullptr;
 
     // Construct solver based on type
-    T solver = T(
+    IntegratorType solver = IntegratorType(
         // Common Inputs
         diffeq_ptr, solution_ptr, t_start, t_end, y0_ptr, num_y, num_extra, args_ptr, max_num_steps, max_ram_MB,
         // RK Inputs

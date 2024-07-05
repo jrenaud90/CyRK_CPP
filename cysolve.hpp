@@ -6,7 +6,7 @@
 #include "rk.hpp"
 #include "cysolver.hpp"
 
-template <typename T>
+template <typename IntegratorType>
 void find_cysolver_and_solve(
     DiffeqFuncType diffeq_ptr,
     std::shared_ptr<CySolverResult> solution_ptr,
@@ -28,7 +28,7 @@ void find_cysolver_and_solve(
     const double first_step_size
 );
 
-template <typename T>
+template <typename IntegratorType>
 void find_pysolver_and_solve(
     // Cython class instance used for pyhook
     PyObject* cython_extension_class_instance,

@@ -1,6 +1,5 @@
 #include "cysolver.hpp"
 
-
 // Constructors
 CySolverBase::CySolverBase() {}
 CySolverBase::CySolverBase(
@@ -87,18 +86,27 @@ CySolverBase::CySolverBase(
 // Destructors
 CySolverBase::~CySolverBase()
 {
-    //this->storage_ptr = nullptr;
+    this->storage_ptr = nullptr;
 }
 
 
 // Protected methods
+void CySolverBase::p_estimate_error()
+{
+    // Overwritten by subclasses.
+}
+
 void CySolverBase::p_step_implementation()
 {
     // Overwritten by subclasses.
 }
 
-
 // Public methods
+void CySolverBase::calc_first_step_size()
+{
+    // Overwritten by subclasses.
+}
+
 bool CySolverBase::check_status() const
 {
     // If the solver is not in state 0 then that is an automatic rejection.
@@ -131,7 +139,7 @@ void CySolverBase::diffeq()
     else
     {
         // Call c function
-        this->diffeq_ptr(this->dy_now_ptr, this->t_now, this->y_now_ptr, this->args_ptr);
+        this->diffeq_ptr(this->dy_now_ptr, this->t_now_ptr[0], this->y_now_ptr, this->args_ptr);
     }
 }
 
@@ -141,7 +149,7 @@ void CySolverBase::reset()
     this->reset_called = false;
 
     // Reset time
-    this->t_now = this->t_start;
+    this->t_now_ptr[0] = this->t_start;
     this->t_old = this->t_start;
     this->len_t = 1;
 
@@ -160,22 +168,21 @@ void CySolverBase::reset()
     this->storage_ptr->update_message("CySolverStorage reset, ready for data.");
 
     // Store initial conditions
-    this->storage_ptr->save_data(this->t_now, this->y_now_ptr, this->dy_now_ptr);
+    this->storage_ptr->save_data(this->t_now_ptr[0], this->y_now_ptr, this->dy_now_ptr);
 
     this->reset_called = true;
 }
 
 void CySolverBase::take_step()
-{
+{    
     if (!this->reset_called)
     {
         // Reset must be called first.
         this->reset();
     }
-
     if (this->status == 0)
     {
-        if (this->t_now == this->t_end)
+        if (this->t_now_ptr[0] == this->t_end)
         {
             // Integration finished
             this->t_old = this->t_end;
@@ -200,7 +207,7 @@ void CySolverBase::take_step()
             this->len_t++;
 
             // Save data
-            this->storage_ptr->save_data(this->t_now, this->y_now_ptr, this->dy_now_ptr);
+            this->storage_ptr->save_data(this->t_now_ptr[0], this->y_now_ptr, this->dy_now_ptr);
         }
     }
 
@@ -275,7 +282,6 @@ void CySolverBase::solve()
 /* PySolver Methods */
 // !!!
 // Uncomment these dummy methods if working outside of CyRK and you just want the program to compile and run for testing/developing the C++ only code.
-
 bool import_CyRK__cy__pysolver_cyhook()
 {
     return true;
@@ -289,7 +295,6 @@ int call_diffeq_from_cython(PyObject* x)
 void Py_XINCREF(PyObject* x)
 {
 }
-
 
 void CySolverBase::set_cython_extension_instance(PyObject* cython_extension_class_instance)
 {
@@ -305,6 +310,7 @@ void CySolverBase::set_cython_extension_instance(PyObject* cython_extension_clas
         }
         else
         {
+            // TODO: Do we need to decref this at some point? During CySolver's deconstruction?
             Py_XINCREF(this->cython_extension_class_instance);
         }
     }

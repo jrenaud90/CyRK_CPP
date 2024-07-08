@@ -1,6 +1,6 @@
 import numpy as np
 
-data = np.loadtxt("out.dat", delimiter=",").T
+data = np.loadtxt("out2.dat", delimiter=",").T
 
 import matplotlib.pyplot as plt
 

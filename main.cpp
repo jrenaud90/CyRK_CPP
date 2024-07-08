@@ -56,7 +56,7 @@ int main(){
         {
 
             t1 = std::chrono::high_resolution_clock::now();
-            result = cysolve_ivp(
+            result = baseline_cysolve_ivp(
                 diffeq_func,
                 time_span_ptr,
                 y0_ptr,

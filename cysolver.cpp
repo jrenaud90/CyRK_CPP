@@ -1,5 +1,26 @@
 #include "cysolver.hpp"
 
+// !!!
+// Uncomment these dummy methods if working outside of CyRK and you just want the program to compile and run for testing/developing the C++ only code.
+
+bool import_CyRK__cy__pysolver_cyhook()
+{
+    return true;
+}
+
+int call_diffeq_from_cython(PyObject* x, DiffeqMethod y)
+{
+    return 1;
+}
+
+void Py_XINCREF(PyObject* x)
+{
+}
+
+void Py_XDECREF(PyObject* x)
+{
+}
+
 // Constructors
 CySolverBase::CySolverBase() {}
 CySolverBase::CySolverBase(
@@ -12,7 +33,10 @@ CySolverBase::CySolverBase(
     const unsigned int num_extra,
     const double* const args_ptr,
     const size_t max_num_steps,
-    const size_t max_ram_MB) :
+    const size_t max_ram_MB,
+    const bool dense_output,
+    const double* t_eval,
+    const size_t len_t_eval) :
         status(0),
         num_y(num_y),
         num_extra(num_extra),
@@ -20,7 +44,10 @@ CySolverBase::CySolverBase(
         t_end(t_end),
         storage_ptr(storage_ptr),
         diffeq_ptr(diffeq_ptr),
-        args_ptr(args_ptr)
+        args_ptr(args_ptr),
+        dense_output(dense_output),
+        t_eval(t_eval),
+        len_t_eval(len_t_eval)
 {   
     // Parse inputs
     this->capture_extra = num_extra > 0;
@@ -79,7 +106,10 @@ CySolverBase::CySolverBase(
         max_ram_MB
     );
     this->user_provided_max_num_steps = max_num_steps_output.user_provided_max_num_steps;
-    this->max_num_steps = max_num_steps_output.max_num_steps;
+    this->max_num_steps               = max_num_steps_output.max_num_steps;
+
+    // Bind diffeq to C++ version
+    this->diffeq = &CySolverBase::cy_diffeq;
 }
 
 
@@ -87,6 +117,11 @@ CySolverBase::CySolverBase(
 CySolverBase::~CySolverBase()
 {
     this->storage_ptr = nullptr;
+    if (this->use_pysolver)
+    {
+        // Decrease reference count on the cython extension class instance
+        Py_XDECREF(this->cython_extension_class_instance);
+    }
 }
 
 
@@ -128,19 +163,10 @@ bool CySolverBase::check_status() const
     return true;
 }
 
-void CySolverBase::diffeq()
+void CySolverBase::cy_diffeq() noexcept
 {
-    // Should we call the c function or the python one?
-    if (this->use_pysolver)
-    {
-        // Call cython-wrapped python function
-        this->py_diffeq();
-    }
-    else
-    {
-        // Call c function
-        this->diffeq_ptr(this->dy_now_ptr, this->t_now_ptr[0], this->y_now_ptr, this->args_ptr);
-    }
+    // Call c function
+    this->diffeq_ptr(this->dy_now_ptr, this->t_now_ptr[0], this->y_now_ptr, this->args_ptr);
 }
 
 void CySolverBase::reset()
@@ -158,7 +184,7 @@ void CySolverBase::reset()
     std::memcpy(this->y_old_ptr, this->y0_ptr, sizeof(double) * this->num_y);
 
     // Call differential equation to set dy0
-    this->diffeq();
+    this->diffeq(this);
 
     // Update dys
     std::memcpy(this->dy_old_ptr, this->dy_now_ptr, sizeof(double) * this->num_y);
@@ -180,7 +206,10 @@ void CySolverBase::take_step()
         // Reset must be called first.
         this->reset();
     }
-    if (this->status == 0)
+
+    double t_now = this->t_now_ptr[0];
+
+    if (!this->status)
     {
         if (this->t_now_ptr[0] == this->t_end)
         {
@@ -206,9 +235,26 @@ void CySolverBase::take_step()
             this->p_step_implementation();
             this->len_t++;
 
+            // Take care of dense output
+            std::shared_ptr<CySolverDense> dense_output_shptr = nullptr;
+            if (this->dense_output)
+            {
+                // Construct interpolator based using this step as a data point.
+                dense_output_shptr = this->p_dense_output();
+
+                // Save interpolator
+                this->storage_ptr->save_dense(this->t_now_ptr[0], dense_output_shptr);
+            }
+
             // Save data
             this->storage_ptr->save_data(this->t_now_ptr[0], this->y_now_ptr, this->dy_now_ptr);
+
+            // Prep for next step
+            this->t_old = t_now;
+            std::memcpy(this->y_old_ptr, this->y_now_ptr, sizeof(double) * this->num_y);
+            std::memcpy(this->dy_old_ptr, this->dy_now_ptr, sizeof(double) * this->num_dy);
         }
+
     }
 
     // Note this is not an "else" block because the integrator may have finished with that last step.
@@ -221,29 +267,29 @@ void CySolverBase::take_step()
         switch (this->status)
         {
         case 2:
-            this->storage_ptr->update_message("Integration storage changed but integrator was not reset. Call `.reset()` before integrating after change.\n");
+            this->storage_ptr->update_message("Integration storage changed but integrator was not reset. Call `.reset()` before integrating after change.");
             break;
         case 1:
-            this->storage_ptr->update_message("Integration completed without issue.\n");
+            this->storage_ptr->update_message("Integration completed without issue.");
             this->storage_ptr->success = true;
             break;
         case -1:
-            this->storage_ptr->update_message("Error in step size calculation:\n\tRequired step size is less than spacing between numbers.\n");
+            this->storage_ptr->update_message("Error in step size calculation:\n\tRequired step size is less than spacing between numbers.");
             break;
         case -2:
-            this->storage_ptr->update_message("Maximum number of steps (set by user) exceeded during integration.\n");
+            this->storage_ptr->update_message("Maximum number of steps (set by user) exceeded during integration.");
             break;
         case -3:
-            this->storage_ptr->update_message("Maximum number of steps (set by system architecture) exceeded during integration.\n");
+            this->storage_ptr->update_message("Maximum number of steps (set by system architecture) exceeded during integration.");
             break;
         case -4:
-            this->storage_ptr->update_message("Error in step size calculation:\n\tError in step size acceptance.\n");
+            this->storage_ptr->update_message("Error in step size calculation:\n\tError in step size acceptance.");
             break;
         case -9:
-            this->storage_ptr->update_message("Error in CySolver initialization.\n");
+            this->storage_ptr->update_message("Error in CySolver initialization.");
             break;
         default:
-            this->storage_ptr->update_message("Unknown status encountered during integration.\n");
+            this->storage_ptr->update_message("Unknown status encountered during integration.");
             break;
         }
         
@@ -278,35 +324,33 @@ void CySolverBase::solve()
     }
 }
 
+/* Dense Output Methods */
+std::shared_ptr<CySolverDense> CySolverBase::p_dense_output()
+{
+    return std::make_shared<CySolverDense>(this->t_old, this->t_now, this->y_now_ptr);
+}
+
 
 /* PySolver Methods */
-// !!!
-// Uncomment these dummy methods if working outside of CyRK and you just want the program to compile and run for testing/developing the C++ only code.
-bool import_CyRK__cy__pysolver_cyhook()
-{
-    return true;
-}
-
-int call_diffeq_from_cython(PyObject* x)
-{
-    return 1;
-}
-
-void Py_XINCREF(PyObject* x)
-{
-}
-
-void CySolverBase::set_cython_extension_instance(PyObject* cython_extension_class_instance)
+void CySolverBase::set_cython_extension_instance(PyObject* cython_extension_class_instance, DiffeqMethod py_diffeq_method)
 {
     this->use_pysolver = true;
     if (cython_extension_class_instance)
     {
         this->cython_extension_class_instance = cython_extension_class_instance;
+        this->py_diffeq_method = py_diffeq_method;
+
+        // Change diffeq binding to the python version
+        this->diffeq = &CySolverBase::py_diffeq;
 
         // Import the cython/python module (functionality provided by "pysolver_api.h")
-        if (import_CyRK__cy__pysolver_cyhook())
+        const int import_error = import_CyRK__cy__pysolver_cyhook();
+        if (import_error)
         {
-            // pass
+            this->use_pysolver = false;
+            this->status = -1;
+            this->storage_ptr->error_code = -51;
+            this->storage_ptr->update_message("Error encountered importing python hooks.\n");
         }
         else
         {
@@ -320,12 +364,5 @@ void CySolverBase::py_diffeq()
 {
     // Call the differential equation in python space. Note that the optional arguments are handled by the python 
     // wrapper class. `this->args_ptr` is not used.
-    int diffeq_status = call_diffeq_from_cython(this->cython_extension_class_instance);
-
-    if (diffeq_status < 0)
-    {
-        this->status = -50;
-        this->storage_ptr->error_code = -50;
-        this->storage_ptr->update_message("Error when calling cython diffeq wrapper from PySolverBase c++ class.\n");
-    }
+    call_diffeq_from_cython(this->cython_extension_class_instance, this->py_diffeq_method);
 }

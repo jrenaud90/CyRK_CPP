@@ -3,16 +3,51 @@
 
 #include "common.hpp"
 #include "cysolver.hpp"
+#include "dense.hpp"
+
+// ########################################################################################################################
+// Dense Output Implementations
+// ########################################################################################################################
+class RKDenseOutput : public CySolverDense
+{
+protected:
+    double step = 0.0;
+
+    // Q is defined by Q = K.T.dot(self.P)  K has shape of (n_stages + 1, num_y) so K.T has shape of (num_y, n_stages + 1)
+    // P has shape of (4, 3) for RK23; (7, 4) for RK45.. So (n_stages + 1, Q_order)
+    // So Q has shape of (num_y, n_stages + 1)
+    // Let's change it to (n_stages + 1, num_y)
+    // The max size of Q is (7-3) * 16 = 64. Lets assume this is the max size and stack allocate Q.
+    double Q[64] = { };
+    unsigned int Q_order = 0;
+
+public:
+    double* Q_ptr = &Q[0];
+
+protected:
+    virtual void call_implementation(double t_interp, double* y_interped) override;
+
+public:
+    virtual ~RKDenseOutput() {};
+    RKDenseOutput() : CySolverDense() {};
+    RKDenseOutput(double t_old, double t_now, double* y_in_ptr, unsigned int num_y, unsigned int Q_order);
+};
 
 
 // ########################################################################################################################
+// RK Integrators
+// ########################################################################################################################
+
+// #####################################################################################################################
 // Runge - Kutta 2(3)
-// ########################################################################################################################
-const unsigned int RK23_order = 3;
-const unsigned int RK23_n_stages = 3;
-const unsigned int RK23_len_Arows = 3;
-const unsigned int RK23_len_Acols = 3;
-const unsigned int RK23_len_C = 3;
+// #####################################################################################################################
+const unsigned int RK23_METHOD_INT            = 0;
+const unsigned int RK23_order                 = 3;
+const unsigned int RK23_n_stages              = 3;
+const unsigned int RK23_len_Arows             = 3;
+const unsigned int RK23_len_Acols             = 3;
+const unsigned int RK23_len_C                 = 3;
+const unsigned int RK23_len_Pcols             = 3;
 const unsigned int RK23_error_estimator_order = 2;
 const double RK23_error_exponent = 1.0 / (2.0 + 1.0);  // Defined as 1 / (error_order + 1)
 
@@ -30,18 +65,21 @@ const double RK23_A[9] = {
     3.0 / 4.0,
     0.0
 };
+const double* const RK23_A_ptr = &RK23_A[0];
 
 const double RK23_B[3] = {
     2.0 / 9.0,
     1.0 / 3.0,
     4.0 / 9.0
 };
+const double* const RK23_B_ptr = &RK23_B[0];
 
 const double RK23_C[3] = {
     0.0,
     1.0 / 2.0,
     3.0 / 4.0
 };
+const double* const RK23_C_ptr = &RK23_C[0];
 
 const double RK23_E[4] = {
     5.0 / 72.0,
@@ -49,16 +87,40 @@ const double RK23_E[4] = {
     -1.0 / 9.0,
     1.0 / 8.0
 };
+const double* const RK23_E_ptr = &RK23_E[0];
 
+// P is the transpose of the one scipy uses.
+const double RK23_P[12] = {
+    // Column 1
+    1.0,
+    0.0,
+    0.0,
+    0.0,
 
-// ########################################################################################################################
+    // Column 2
+    -4.0 / 3.0,
+    1.0,
+    4.0 / 3.0,
+    -1.0,
+
+    // Column 3
+    5.0 / 9.0,
+    -2.0 / 3.0,
+    -8.0 / 9.0,
+    1.0
+};
+const double* RK23_P_ptr = &RK23_P[0];
+
+// #####################################################################################################################
 // Runge - Kutta 4(5)
-// ########################################################################################################################
-const unsigned int RK45_order = 5;
-const unsigned int RK45_n_stages = 6;
-const unsigned int RK45_len_Arows = 6;
-const unsigned int RK45_len_Acols = 5;
-const unsigned int RK45_len_C = 6;
+// #####################################################################################################################
+const unsigned int RK45_METHOD_INT            = 1;
+const unsigned int RK45_order                 = 5;
+const unsigned int RK45_n_stages              = 6;
+const unsigned int RK45_len_Arows             = 6;
+const unsigned int RK45_len_Acols             = 5;
+const unsigned int RK45_len_C                 = 6;
+const unsigned int RK45_len_Pcols             = 4;
 const unsigned int RK45_error_estimator_order = 4;
 const double RK45_error_exponent = 1.0 / (4.0 + 1.0);  // Defined as 1 / (error_order + 1)
 
@@ -100,6 +162,7 @@ const double RK45_A[30] = {
     49.0 / 176.0,
     -5103.0 / 18656.0
 };
+const double* const RK45_A_ptr = &RK45_A[0];
 
 const double RK45_B[6] = {
     35.0 / 384.0,
@@ -109,6 +172,7 @@ const double RK45_B[6] = {
     -2187.0 / 6784.0,
     11.0 / 84.0
 };
+const double* const RK45_B_ptr = &RK45_B[0];
 
 const double RK45_C[6] = {
     0.0,
@@ -118,6 +182,7 @@ const double RK45_C[6] = {
     8.0 / 9.0,
     1.0
 };
+const double* const RK45_C_ptr = &RK45_C[0];
 
 const double RK45_E[7] = {
     -71.0 / 57600.0,
@@ -128,18 +193,61 @@ const double RK45_E[7] = {
     -22.0 / 525.0,
     1.0 / 40.0
 };
+const double* const RK45_E_ptr = &RK45_E[0];
 
 
-// ########################################################################################################################
+// P is the transpose of the one scipy uses.
+const double RK45_P[28] = {
+    // Column 1
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+
+    // Column 2
+    -8048581381.0 / 2820520608.0,
+    0.0,
+    131558114200.0 / 32700410799.0,
+    -1754552775.0 / 470086768.0,
+    127303824393.0 / 49829197408.0,
+    -282668133.0 / 205662961.0,
+    40617522.0 / 29380423.0,
+
+    // Column 3
+    8663915743.0 / 2820520608.0,
+    0.0,
+    -68118460800.0 / 10900136933.0,
+    14199869525.0 / 1410260304.0,
+    -318862633887.0 / 49829197408.0,
+    2019193451.0 / 616988883.0,
+    -110615467.0 / 29380423.0,
+
+    // Column 4
+    -12715105075.0 / 11282082432.0,
+    0.0,
+    87487479700.0 / 32700410799.0,
+    -10690763975.0 / 1880347072.0,
+    701980252875.0 / 199316789632.0,
+    -1453857185.0 / 822651844.0,
+    69997945.0 / 29380423.0
+};
+const double* RK45_P_ptr = &RK45_P[0];
+
+
+// #####################################################################################################################
 // Runge - Kutta DOP 8(5; 3)
-// ########################################################################################################################
-const unsigned int DOP853_order = 8;
-const unsigned int DOP853_n_stages = 12;
-const unsigned int DOP853_A_rows = 12;
-const unsigned int DOP853_A_cols = 12;
-const unsigned int DOP853_len_C = 12;
+// #####################################################################################################################
+const unsigned int DOP853_METHOD_INT            = 2;
+const unsigned int DOP853_order                 = 8;
+const unsigned int DOP853_n_stages              = 12;
+const unsigned int DOP853_A_rows                = 12;
+const unsigned int DOP853_A_cols                = 12;
+const unsigned int DOP853_len_C                 = 12;
 const unsigned int DOP853_error_estimator_order = 7;
-const double DOP853_error_exponent = 1.0 / (7.0 + 1.0);  // Defined as 1 / (error_order + 1)
+const double DOP853_error_exponent              = 1.0 / (7.0 + 1.0);  // Defined as 1 / (error_order + 1)
 
 // Note both A and C are the _reduced_ versions.The full A and C are not shown.
 const double DOP853_A[144] = {
@@ -300,6 +408,7 @@ const double DOP853_A[144] = {
     6.43392746015763530355970484046e-1,
     0.0
 };
+const double* const DOP853_A_ptr = &DOP853_A[0];
 
 // Note: B is equal to the 13th row of the expanded version of A(which we do not define above)
 const double DOP853_B[12] = {
@@ -316,6 +425,7 @@ const double DOP853_B[12] = {
     2.01365400804030348374776537501e-1,
     4.47106157277725905176885569043e-2
 };
+const double* const DOP853_B_ptr = &DOP853_B[0];
 
 
 // Note this is the reduced C array.The expanded version is not shown.
@@ -333,6 +443,7 @@ const double DOP853_C[12] = {
     0.857142857142857142857142857142,
     1.0
 };
+const double* const DOP853_C_ptr = &DOP853_C[0];
 
 // All except last value equals B(B length is one less than E3).
 const double DOP853_E3[13] = {
@@ -350,7 +461,7 @@ const double DOP853_E3[13] = {
     4.47106157277725905176885569043e-2 - 0.220588235294117647058823529412e-1,
     0.0
 };
-
+const double* const DOP853_E3_ptr = &DOP853_E3[0];
 
 const double DOP853_E5[13] = {
     0.1312004499419488073250102996e-1,
@@ -367,7 +478,7 @@ const double DOP853_E5[13] = {
     -0.2235530786388629525884427845e-1,
     0.
 };
-
+const double* const DOP853_E5_ptr = &DOP853_E5[0];
 
 // ########################################################################################################################
 // Classes
@@ -388,8 +499,9 @@ protected:
     unsigned int n_stages_p1  = 0;
     unsigned int len_Acols    = 0;
     unsigned int len_C        = 0;
+    unsigned int len_Pcols    = 0;
     unsigned int nstages_numy = 0;
-    double error_exponent = 0.0;
+    double error_exponent     = 0.0;
 
     // Pointers to RK constant arrays
     const double* C_ptr  = nullptr;
@@ -409,10 +521,10 @@ protected:
     // For the same reason num_y is limited, the total number of tolerances are limited.
     double rtols[Y_LIMIT] = { std::nan("") };
     double atols[Y_LIMIT] = { std::nan("") };
-    double* rtols_ptr = &rtols[0];
-    double* atols_ptr = &atols[0];
-    bool use_array_rtols = false;
-    bool use_array_atols = false;
+    double* rtols_ptr     = &rtols[0];
+    double* atols_ptr     = &atols[0];
+    bool use_array_rtols  = false;
+    bool use_array_atols  = false;
 
     // Step size parameters
     double user_provided_first_step_size = 0.0;
@@ -428,6 +540,7 @@ protected:
 protected:
     virtual void p_estimate_error() override;
     virtual void p_step_implementation() override;
+    virtual std::shared_ptr<CySolverDense> p_dense_output() override;
 
 public:
     RKSolver();
@@ -444,6 +557,9 @@ public:
         const double* args_ptr = nullptr,
         const size_t max_num_steps = 0,
         const size_t max_ram_MB = 2000,
+        const bool dense_output = false,
+        const double* t_eval = nullptr,
+        const size_t len_t_eval = 0,
         // RKSolver input arguments
         const double rtol = 1.0e-3,
         const double atol = 1.0e-6,
@@ -468,7 +584,6 @@ public:
     using RKSolver::RKSolver;
     virtual void reset() override;
 };
-
 
 class RK45 : public RKSolver {
 

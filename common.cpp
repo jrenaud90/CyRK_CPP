@@ -3,6 +3,20 @@
 #include "common.hpp"
 
 
+void round_to_2(size_t &initial_value)
+{
+    /* Rounds the initial value to the nearest power of 2 */
+    // Method is the fastest for 64-bit numbers
+    initial_value--;
+    initial_value |= initial_value >> 1;
+    initial_value |= initial_value >> 2;
+    initial_value |= initial_value >> 4;
+    initial_value |= initial_value >> 8;
+    initial_value |= initial_value >> 16;
+    initial_value |= initial_value >> 32;
+    initial_value++;
+}
+
 MaxNumStepsOutput find_max_num_steps(
     const int num_y,
     const int num_extra,
@@ -49,8 +63,8 @@ size_t find_expected_size(
     const double rtol_min)
     /* Finds an expected size for storage arrays (length of time domain) that is suitable to the provided problem */
 {
-    // Pick starting value that works with most problems
-    double temp_expected_size = 500.0;
+    // Pick starting value that works with a lot of problems.
+    double temp_expected_size = 256;
     // If t_delta_abs is very large or rtol is very small, then we may need more.
     temp_expected_size = std::fmax(temp_expected_size, std::fmax(t_delta_abs / ARRAY_PREALLOC_TABS_SCALE, ARRAY_PREALLOC_RTOL_SCALE / rtol_min));
     // Fix values that are very small / large

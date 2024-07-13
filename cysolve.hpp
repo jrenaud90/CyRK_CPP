@@ -3,31 +3,9 @@
 #include <memory>
 
 #include "common.hpp"
-#include "rk.hpp"
 #include "cysolver.hpp"
+#include "rk.hpp"
 
-/* Pure C++ / Cython solvers and helpers */
-template <typename IntegratorType>
-void find_cysolver_and_solve(
-    DiffeqFuncType diffeq_ptr,
-    std::shared_ptr<CySolverResult> solution_ptr,
-    const double t_start,
-    const double t_end,
-    const double* y0_ptr,
-    const unsigned int num_y,
-    // General optional arguments
-    const unsigned int num_extra,
-    const double* args_ptr,
-    // rk optional arguments
-    const size_t max_num_steps,
-    const size_t max_ram_MB,
-    const double rtol,
-    const double atol,
-    const double* rtols_ptr,
-    const double* atols_ptr,
-    const double max_step_size,
-    const double first_step_size
-);
 
 std::shared_ptr<CySolverResult> baseline_cysolve_ivp(
     DiffeqFuncType diffeq_ptr,
@@ -39,6 +17,9 @@ std::shared_ptr<CySolverResult> baseline_cysolve_ivp(
     const size_t expected_size = 0,
     const unsigned int num_extra = 0,
     const double* args_ptr = nullptr,
+    const bool dense_output = false,
+    const double* t_eval = nullptr,
+    const size_t len_t_eval = 0,
     // rk optional arguments
     const size_t max_num_steps = 0,
     const size_t max_ram_MB = 2000,
@@ -84,6 +65,7 @@ public:
         unsigned int integration_method,
         // Cython class instance used for pyhook
         PyObject* cython_extension_class_instance,
+        DiffeqMethod cython_extension_class_diffeq_method,
         // Regular integrator inputs
         std::shared_ptr<CySolverResult> solution_ptr,
         const double t_start,
@@ -93,6 +75,9 @@ public:
         // General optional arguments
         const unsigned int num_extra,
         const double* args_ptr,
+        const bool dense_output,
+        const double* t_eval,
+        const size_t len_t_eval,
         // rk optional arguments
         const size_t max_num_steps,
         const size_t max_ram_MB,

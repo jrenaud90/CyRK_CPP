@@ -20,6 +20,7 @@ int main(){
 
     DiffeqFuncType diffeq_func = test_diffeq;
 
+
     double time_span[2] = {0.0, 500.0};
     double* time_span_ptr = &time_span[0];
     unsigned int method = 1;
@@ -36,19 +37,26 @@ int main(){
     double rtol = 1.0e-7;
     double atol = 1.0e-8;
     
-    size_t expected_size = 300;
+    size_t expected_size = 0;
     
     double running_sum = 0.0;
     size_t final_size;
     size_t sol_size;
+    size_t num_interps = 0;
+
+
+    bool dense_output = true;
+    double* t_eval_ptr = nullptr;
+    const size_t len_t_eval = 0;
 
     std::shared_ptr<CySolverResult> result;
 
     auto t1 = std::chrono::high_resolution_clock::now();
     auto t2 = std::chrono::high_resolution_clock::now();
     int k = 0;
+    int k_max = 20;
     double total_runner = 0.0;
-    while (k < 20)
+    while (k < k_max)
     {
         running_sum = 0.0;
 
@@ -65,6 +73,9 @@ int main(){
                 expected_size,
                 num_extra,
                 nullptr,
+                dense_output,
+                t_eval_ptr,
+                len_t_eval,
                 100000,
                 2000,
                 rtol,
@@ -73,6 +84,7 @@ int main(){
 
             final_size = result->size;
             msg_ptr = result->message_ptr;
+            num_interps = result->num_interpolates;
             //std::cout << result->message_ptr << std::endl;
             sol_size = final_size * 2;
 
@@ -83,14 +95,18 @@ int main(){
         }
 
         std::cout << "SIZE: " << final_size << std::endl;
+        std::cout << "NUM INTERPS: " << num_interps << std::endl;
         std::cout << "Message: " << msg_ptr << std::endl;
         std::cout << "AVERAGE: " << running_sum / max_i << "us\n" << std::endl;
-        total_runner += running_sum / max_i;
+        if (k > 3)
+        {
+            total_runner += running_sum / max_i;
+        }
         k += 1;
         //break;
     }
 
-    std::cout << "Done! Final Avg: " << total_runner / 20 << std::endl << "Saving data..." << std::endl;
+    std::cout << "Done! Final Avg: " << total_runner / (k_max - 4) << std::endl << "Saving data..." << std::endl;
 
     
     std::ofstream datastream;

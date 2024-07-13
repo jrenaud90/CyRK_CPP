@@ -33,6 +33,12 @@
     <ClCompile Include="cysolve.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="dense.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cy_array.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cysolution.hpp">
@@ -48,6 +54,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="cysolve.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dense.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cy_array.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

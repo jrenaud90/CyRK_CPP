@@ -10,14 +10,16 @@ CySolverResult::CySolverResult()
 }
 
 CySolverResult::CySolverResult(
-            const int num_y,
-            const int num_extra,
-            const size_t expected_size,
-            const bool direction_flag,
-            const bool capture_dense_output,
-            const bool t_eval_provided) :
+        const int num_y,
+        const int num_extra,
+        const size_t expected_size,
+        const size_t last_t,
+        const bool direction_flag,
+        const bool capture_dense_output,
+        const bool t_eval_provided) :
         num_y(num_y),
         num_extra(num_extra),
+        last_t(last_t),
         error_code(0),
         direction_flag(direction_flag),
         capture_dense_output(capture_dense_output),
@@ -303,4 +305,41 @@ void CySolverResult::finalize()
 void CySolverResult::update_message(const char* const new_message_ptr)
 {
     std::strcpy(this->message_ptr, new_message_ptr);
+}
+
+void CySolverResult::call(const double t, double* y_interp)
+{
+    if (!this->capture_dense_output)
+    {
+        this->error_code = -80;
+        this->update_message("Can not call solution when dense output is not saved.");
+    }
+    else
+    {
+        double* interp_time_touse_ptr = nullptr;
+        size_t interp_time_len_touse = 0;
+        if (this->t_eval_provided)
+        {
+            interp_time_touse_ptr = &this->interp_time[0];
+            interp_time_len_touse = this->num_interpolates;
+        }
+        else
+        {
+            interp_time_touse_ptr = &this->time_domain[0];
+            interp_time_len_touse = this->size;
+        }
+        // SciPy uses np.searchedsorted which as far as I can tell works the same as bibnary search with guess
+        // Except that it is searchedsorted is 1 more than binary search.
+        // This may only hold if the integration is in the forward direction.
+        // TODO: See if this holds for backwards integration and update if needed.
+        // Get a guess for binary search
+        size_t closest_index = (size_t)std::floor(interp_time_len_touse * t / this->last_t);
+        closest_index = 1 + binary_search_with_guess(t, interp_time_touse_ptr, interp_time_len_touse, closest_index);
+    
+        // Clean up closest index
+        closest_index = std::min<size_t>(std::max<size_t>(closest_index - 1, 0), interp_time_len_touse - 1);
+
+        // Call interpolant to update y
+        this->dense_vector[closest_index]->call(t, y_interp);
+    }
 }

@@ -195,6 +195,13 @@ void CySolverBase::reset()
 
     // Store initial conditions
     this->storage_ptr->save_data(this->t_now_ptr[0], this->y_now_ptr, this->dy_now_ptr);
+    
+    // Construct interpolator based using this step as a data point.
+    std::shared_ptr<CySolverDense> dense_output_shptr = this->p_dense_output();
+
+    // Save interpolator
+    this->storage_ptr->save_dense(this->t_now_ptr[0], dense_output_shptr);
+
 
     this->reset_called = true;
 }
@@ -233,14 +240,14 @@ void CySolverBase::take_step()
         {
             // ** Make call to solver's step implementation **
             this->p_step_implementation();
+
             this->len_t++;
 
             // Take care of dense output
-            std::shared_ptr<CySolverDense> dense_output_shptr = nullptr;
             if (this->dense_output)
             {
                 // Construct interpolator based using this step as a data point.
-                dense_output_shptr = this->p_dense_output();
+                std::shared_ptr<CySolverDense> dense_output_shptr = this->p_dense_output();
 
                 // Save interpolator
                 this->storage_ptr->save_dense(this->t_now_ptr[0], dense_output_shptr);
@@ -250,7 +257,7 @@ void CySolverBase::take_step()
             this->storage_ptr->save_data(this->t_now_ptr[0], this->y_now_ptr, this->dy_now_ptr);
 
             // Prep for next step
-            this->t_old = t_now;
+            this->t_old = this->t_now_ptr[0];
             std::memcpy(this->y_old_ptr, this->y_now_ptr, sizeof(double) * this->num_y);
             std::memcpy(this->dy_old_ptr, this->dy_now_ptr, sizeof(double) * this->num_dy);
         }
@@ -327,7 +334,7 @@ void CySolverBase::solve()
 /* Dense Output Methods */
 std::shared_ptr<CySolverDense> CySolverBase::p_dense_output()
 {
-    return std::make_shared<CySolverDense>(this->t_old, this->t_now, this->y_now_ptr);
+    return std::make_shared<CySolverDense>(this->t_old, this->t_now_ptr[0], this->y_old_ptr, this->num_y);
 }
 
 

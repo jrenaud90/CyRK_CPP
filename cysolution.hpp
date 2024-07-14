@@ -4,9 +4,11 @@
 #include <cstdio>
 #include <vector>
 #include <memory>
+#include <algorithm>
 
 #include "common.hpp"
 #include "dense.hpp"
+#include "cy_array.hpp"
 
 class CySolverResult {
 
@@ -38,6 +40,7 @@ protected:
     // Dense Output
     bool capture_dense_output = false;
     bool t_eval_provided      = false;
+    size_t last_t = 0;
 
 public:
     // Status information
@@ -97,6 +100,7 @@ public:
         const int num_y,
         const int num_extra,
         const size_t expected_size,
+        const size_t last_t,
         const bool direction_flag,
         const bool capture_dense_output,
         const bool t_eval_provided);
@@ -105,4 +109,5 @@ public:
     void finalize();
     void reset();
     void update_message(const char* const new_message_ptr);
+    void call(const double t, double* y_interp);
 };

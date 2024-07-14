@@ -25,12 +25,12 @@ public:
     double* Q_ptr = &Q[0];
 
 protected:
-    virtual void call_implementation(double t_interp, double* y_interped) override;
 
 public:
     virtual ~RKDenseOutput() {};
     RKDenseOutput() : CySolverDense() {};
     RKDenseOutput(double t_old, double t_now, double* y_in_ptr, unsigned int num_y, unsigned int Q_order);
+    virtual void call(double t_interp, double* y_interped) override;
 };
 
 
@@ -109,7 +109,7 @@ const double RK23_P[12] = {
     -8.0 / 9.0,
     1.0
 };
-const double* RK23_P_ptr = &RK23_P[0];
+const double* const RK23_P_ptr = &RK23_P[0];
 
 // #####################################################################################################################
 // Runge - Kutta 4(5)
@@ -234,7 +234,7 @@ const double RK45_P[28] = {
     -1453857185.0 / 822651844.0,
     69997945.0 / 29380423.0
 };
-const double* RK45_P_ptr = &RK45_P[0];
+const double* const RK45_P_ptr = &RK45_P[0];
 
 
 // #####################################################################################################################

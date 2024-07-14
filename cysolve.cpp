@@ -70,6 +70,7 @@ std::shared_ptr<CySolverResult> baseline_cysolve_ivp(
             num_y,
             num_extra,
             expected_size_touse,
+            t_end,
             direction_flag,
             dense_output,
             t_eval_provided);

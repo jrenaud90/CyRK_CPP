@@ -22,12 +22,10 @@ public:
 /* Methods */
 protected:
 
-    virtual void call_implementation(double t_interp, double* y_interped);
-
 public:
     virtual ~CySolverDense() {};
     CySolverDense() {};
     CySolverDense(double t_old, double t_now, double* y_in_ptr, unsigned int num_y);
 
-    void call(double t_interp, double* y_interped);
+    virtual void call(double t_interp, double* y_interped);
 };

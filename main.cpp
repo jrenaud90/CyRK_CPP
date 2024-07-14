@@ -45,8 +45,8 @@ int main(){
     size_t num_interps = 0;
 
 
-    bool dense_output = true;
-    double* t_eval_ptr = nullptr;
+    const bool dense_output = true;
+    const double* t_eval_ptr = nullptr;
     const size_t len_t_eval = 0;
 
     std::shared_ptr<CySolverResult> result;
@@ -56,6 +56,11 @@ int main(){
     int k = 0;
     int k_max = 20;
     double total_runner = 0.0;
+    double t_at_20;
+    double y_at_20[2] = { -99.0, -99.0 };
+    double* y_at_20_ptr = &y_at_20[0];
+    double y_int_at_20[2];
+    double* y_int_at_20_ptr = &y_int_at_20[0];
     while (k < k_max)
     {
         running_sum = 0.0;
@@ -85,6 +90,10 @@ int main(){
             final_size = result->size;
             msg_ptr = result->message_ptr;
             num_interps = result->num_interpolates;
+            t_at_20 = result->time_domain[4];
+            y_at_20_ptr = &result->solution[2 * 4];
+            result->call(t_at_20, y_int_at_20_ptr);
+
             //std::cout << result->message_ptr << std::endl;
             sol_size = final_size * 2;
 
@@ -96,6 +105,8 @@ int main(){
 
         std::cout << "SIZE: " << final_size << std::endl;
         std::cout << "NUM INTERPS: " << num_interps << std::endl;
+        std::cout << "20 t = " << t_at_20 << "; y0 = " << y_at_20_ptr[0] << ", y1 = " << y_at_20_ptr[1] << std::endl;
+        std::cout << "INTERP:: " << "y0 = " << y_int_at_20_ptr[0] << ", y1 = " << y_int_at_20_ptr[1] << std::endl;
         std::cout << "Message: " << msg_ptr << std::endl;
         std::cout << "AVERAGE: " << running_sum / max_i << "us\n" << std::endl;
         if (k > 3)

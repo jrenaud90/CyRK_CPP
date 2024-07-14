@@ -585,11 +585,15 @@ void RKSolver::p_step_implementation()
 // Public methods
 void RKSolver::reset()
 {
-    // Call base class reset.
-    CySolverBase::reset();
     // Update stride information
     this->nstages_numy = this->n_stages * this->num_y;
     this->n_stages_p1  = this->n_stages + 1;
+
+    // It is important to initialize the K variable with zeros
+    std::fill(this->K_ptr, this->K_ptr + (this->num_y * this->n_stages_p1), 0.0);
+
+    // Call base class reset after K is established but before first step size is calculated.
+    CySolverBase::reset();
 
     // Update initial step size
     if (this->user_provided_first_step_size == 0.0)
@@ -600,9 +604,6 @@ void RKSolver::reset()
     else {
         this->step_size = this->user_provided_first_step_size;
     }
-
-    // It is important to initialize the K variable with zeros
-    std::fill(this->K_ptr, this->K_ptr + (this->num_y * this->n_stages_p1), 0.0);
 }
 
 void RKSolver::calc_first_step_size()
@@ -706,7 +707,7 @@ std::shared_ptr<CySolverDense> RKSolver::p_dense_output()
 {
     // Build dense output object instance
     std::shared_ptr<RKDenseOutput> dense_output =
-        std::make_shared<RKDenseOutput>(this->t_old, this->t_now, this->y_old_ptr, this->num_y, this->len_Pcols);
+        std::make_shared<RKDenseOutput>(this->t_old, this->t_now_ptr[0], this->y_old_ptr, this->num_y, this->len_Pcols);
 
     // Calculate Q
     // Q is defined by Q = K.T.dot(self.P)  K has shape of (n_stages + 1, num_y) so K.T has shape of (num_y, n_stages + 1)
@@ -945,7 +946,7 @@ RKDenseOutput::RKDenseOutput(double t_old, double t_now, double* y_in_ptr, unsig
     this->step = t_now - t_old;
 }
 
-void RKDenseOutput::call_implementation(double t_interp, double* y_interped)
+void RKDenseOutput::call(double t_interp, double* y_interped)
 {
     double step_factor = (t_interp - this->t_old) / this->step;
 
@@ -964,7 +965,7 @@ void RKDenseOutput::call_implementation(double t_interp, double* y_interped)
         for (unsigned int i = 1; i < (this->Q_order); i++)
         {
             cumlative_prod *= step_factor;
-            temp_double = this->Q_ptr[Q_stride + i] * cumlative_prod;
+            temp_double += this->Q_ptr[Q_stride + i] * cumlative_prod;
         }
 
         y_interped[y_i] = this->y_stored_ptr[y_i] + this->step * temp_double;

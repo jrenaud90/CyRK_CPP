@@ -540,7 +540,9 @@ protected:
 protected:
     virtual void p_estimate_error() override;
     virtual void p_step_implementation() override;
-    virtual CySolverDense* p_dense_output() override;
+    virtual CySolverDense* p_dense_output_heap() override;
+    virtual CySolverDense p_dense_output_stack() override;
+    virtual void p_update_Q(double* Q_ptr) const;
 
 public:
     RKSolver();
@@ -557,7 +559,7 @@ public:
         const double* args_ptr = nullptr,
         const size_t max_num_steps = 0,
         const size_t max_ram_MB = 2000,
-        const bool dense_output = false,
+        const bool use_dense_output = false,
         const double* t_eval = nullptr,
         const size_t len_t_eval = 0,
         // RKSolver input arguments

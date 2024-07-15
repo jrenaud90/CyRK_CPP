@@ -14,6 +14,33 @@ static void test_diffeq(double* dy_ptr, double time, double* y_ptr, const double
     dy_ptr[1] = (0.02 * y0 - 1.) * y1;
 }
 
+
+std::vector<double> linspace(double start, double end, size_t num_in)
+{
+
+    std::vector<double> linspaced;
+    linspaced.reserve(num_in);
+
+    double num = static_cast<double>(num_in);
+
+    if (num == 0) { return linspaced; }
+    if (num == 1)
+    {
+        linspaced.push_back(start);
+        return linspaced;
+    }
+
+    double delta = (end - start) / (num - 1);
+
+    for (int i = 0; i < num - 1; ++i)
+    {
+        linspaced.push_back(start + delta * i);
+    }
+    linspaced.push_back(end); // I want to ensure that start and end
+    // are exactly the same as the input
+    return linspaced;
+}
+
 int main(){
     //std::cout << "Running..." << std::endl;
 
@@ -46,8 +73,14 @@ int main(){
 
 
     const bool dense_output = true;
-    const double* t_eval_ptr = nullptr;
-    const size_t len_t_eval = 0;
+
+
+    size_t len_t_eval = 7070;  // 7070 == 2x; 1767 == 0.5x for tspan of (0, 500)
+    std::vector<double> t_eval = linspace(time_span_ptr[0], time_span_ptr[1], len_t_eval);
+    const double* t_eval_ptr = &t_eval[0];
+
+    //len_t_eval = 0;
+    //t_eval_ptr = nullptr;
 
     std::shared_ptr<CySolverResult> result;
 
@@ -106,7 +139,7 @@ int main(){
         std::cout << "SIZE: " << final_size << std::endl;
         std::cout << "NUM INTERPS: " << num_interps << std::endl;
         std::cout << "20 t = " << t_at_20 << "; y0 = " << y_at_20_ptr[0] << ", y1 = " << y_at_20_ptr[1] << std::endl;
-        std::cout << "INTERP:: " << "y0 = " << y_int_at_20_ptr[0] << ", y1 = " << y_int_at_20_ptr[1] << std::endl;
+        std::cout << "DENSE INTERP:: " << "y0 = " << y_int_at_20_ptr[0] << ", y1 = " << y_int_at_20_ptr[1] << std::endl;
         std::cout << "Message: " << msg_ptr << std::endl;
         std::cout << "AVERAGE: " << running_sum / max_i << "us\n" << std::endl;
         if (k > 3)

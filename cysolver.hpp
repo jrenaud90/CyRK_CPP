@@ -31,7 +31,8 @@ class CySolverBase {
 protected:
     virtual void p_estimate_error();
     virtual void p_step_implementation();
-    virtual CySolverDense* p_dense_output();
+    virtual CySolverDense* p_dense_output_heap();
+    virtual CySolverDense p_dense_output_stack();
 
 public:
     CySolverBase();
@@ -48,7 +49,7 @@ public:
         const double* const args_ptr = nullptr,
         const size_t max_num_steps = 0,
         const size_t max_ram_MB = 2000,
-        const bool dense_output = false,
+        const bool use_dense_output = false,
         const double* t_eval = nullptr,
         const size_t len_t_eval = 0
     );
@@ -113,9 +114,13 @@ protected:
     bool user_provided_max_num_steps = false;
 
     // Dense (Interpolation) Attributes
-    bool dense_output    = false;
-    const double* t_eval = nullptr;
-    size_t len_t_eval    = 0;
+    bool use_dense_output = false;
+    
+    // t_eval information
+    size_t t_eval_index_old  = 0;
+    bool use_t_eval    = false;
+    const double* t_eval_ptr = nullptr;
+    size_t len_t_eval        = 0;
 
 public:
     // Status attributes

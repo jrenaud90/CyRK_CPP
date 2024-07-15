@@ -59,7 +59,7 @@ CySolverResult::~CySolverResult()
     // The data itself is heap allocated but the vector class will handle that.
 
     // Need to delete the heap allocated dense solutions
-    if (this->capture_extra)
+    if (this->capture_dense_output)
     {
         for (size_t i = 0; i < this->num_interpolates; i++)
         {

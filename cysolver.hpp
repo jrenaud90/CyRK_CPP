@@ -31,7 +31,7 @@ class CySolverBase {
 protected:
     virtual void p_estimate_error();
     virtual void p_step_implementation();
-    virtual std::shared_ptr<CySolverDense> p_dense_output();
+    virtual CySolverDense* p_dense_output();
 
 public:
     CySolverBase();
@@ -112,14 +112,15 @@ protected:
     bool capture_extra  = false;
     bool user_provided_max_num_steps = false;
 
-    // Interpolation attributes
+    // Dense (Interpolation) Attributes
+    bool dense_output    = false;
     const double* t_eval = nullptr;
-    size_t len_t_eval = 0;
-    bool dense_output = false;
+    size_t len_t_eval    = 0;
 
 public:
     // Status attributes
     int status = -999;
+    int method_int = -1;
 
     // Meta data
     unsigned int num_y = 0;

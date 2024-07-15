@@ -703,11 +703,10 @@ void RKSolver::calc_first_step_size()
 }
 
 /* Dense Output Methods */
-std::shared_ptr<CySolverDense> RKSolver::p_dense_output()
+CySolverDense* RKSolver::p_dense_output()
 {
     // Build dense output object instance
-    std::shared_ptr<RKDenseOutput> dense_output =
-        std::make_shared<RKDenseOutput>(this->t_old, this->t_now_ptr[0], this->y_old_ptr, this->num_y, this->len_Pcols);
+    RKDenseOutput* dense_output = new RKDenseOutput(this->t_old, this->t_now_ptr[0], this->y_old_ptr, this->num_y, this->len_Pcols);
 
     // Calculate Q
     // Q is defined by Q = K.T.dot(self.P)  K has shape of (n_stages + 1, num_y) so K.T has shape of (num_y, n_stages + 1)
@@ -719,21 +718,108 @@ std::shared_ptr<CySolverDense> RKSolver::p_dense_output()
         const unsigned int stride_Q = y_i * this->len_Pcols;
         const unsigned int stride_K = y_i * this->n_stages_p1;
 
-        for (unsigned int P_i = 0; P_i < this->len_Pcols; P_i++)
+        switch (this->method_int)
         {
-            const unsigned int stride_P = P_i * this->n_stages_p1;
-            
-            // Initialize dot product
-            double temp_double = 0.0;
+        double temp_double;
+        unsigned int stride_P;
 
+        case(0):
+            // RK23
+            // len_Pcols == 3; n_stages + 1 == 4
 
-            for (unsigned int n_i = 0; n_i < this->n_stages_p1; n_i++)
+            // P = 0
+            temp_double  = this->K_ptr[stride_K]     * this->P_ptr[0];
+            temp_double += this->K_ptr[stride_K + 1] * this->P_ptr[1];
+            temp_double += this->K_ptr[stride_K + 2] * this->P_ptr[2];
+            temp_double += this->K_ptr[stride_K + 3] * this->P_ptr[3];
+            dense_output->Q_ptr[stride_Q] = temp_double;
+
+            // P = 1
+            stride_P     = this->n_stages_p1;
+            temp_double  = this->K_ptr[stride_K]     * this->P_ptr[stride_P];
+            temp_double += this->K_ptr[stride_K + 1] * this->P_ptr[stride_P + 1];
+            temp_double += this->K_ptr[stride_K + 2] * this->P_ptr[stride_P + 2];
+            temp_double += this->K_ptr[stride_K + 3] * this->P_ptr[stride_P + 3];
+            dense_output->Q_ptr[stride_Q + 1] = temp_double;
+
+            // P = 2
+            stride_P    += this->n_stages_p1;
+            temp_double  = this->K_ptr[stride_K]     * this->P_ptr[stride_P];
+            temp_double += this->K_ptr[stride_K + 1] * this->P_ptr[stride_P + 1];
+            temp_double += this->K_ptr[stride_K + 2] * this->P_ptr[stride_P + 2];
+            temp_double += this->K_ptr[stride_K + 3] * this->P_ptr[stride_P + 3];
+            dense_output->Q_ptr[stride_Q + 2] = temp_double;
+
+            break;
+        case(1):
+            // RK45
+            // len_Pcols == 4; n_stages + 1 == 7
+            // P = 0
+            temp_double  = this->K_ptr[stride_K]     * this->P_ptr[0];
+            temp_double += this->K_ptr[stride_K + 1] * this->P_ptr[1];
+            temp_double += this->K_ptr[stride_K + 2] * this->P_ptr[2];
+            temp_double += this->K_ptr[stride_K + 3] * this->P_ptr[3];
+            temp_double += this->K_ptr[stride_K + 4] * this->P_ptr[4];
+            temp_double += this->K_ptr[stride_K + 5] * this->P_ptr[5];
+            temp_double += this->K_ptr[stride_K + 6] * this->P_ptr[6];
+            dense_output->Q_ptr[stride_Q] = temp_double;
+
+            // P = 1
+            stride_P     = this->n_stages_p1;
+            temp_double  = this->K_ptr[stride_K]     * this->P_ptr[stride_P];
+            temp_double += this->K_ptr[stride_K + 1] * this->P_ptr[stride_P + 1];
+            temp_double += this->K_ptr[stride_K + 2] * this->P_ptr[stride_P + 2];
+            temp_double += this->K_ptr[stride_K + 3] * this->P_ptr[stride_P + 3];
+            temp_double += this->K_ptr[stride_K + 4] * this->P_ptr[stride_P + 4];
+            temp_double += this->K_ptr[stride_K + 5] * this->P_ptr[stride_P + 5];
+            temp_double += this->K_ptr[stride_K + 6] * this->P_ptr[stride_P + 6];
+            dense_output->Q_ptr[stride_Q + 1] = temp_double;
+
+            // P = 2
+            stride_P    += this->n_stages_p1;
+            temp_double  = this->K_ptr[stride_K]     * this->P_ptr[stride_P];
+            temp_double += this->K_ptr[stride_K + 1] * this->P_ptr[stride_P + 1];
+            temp_double += this->K_ptr[stride_K + 2] * this->P_ptr[stride_P + 2];
+            temp_double += this->K_ptr[stride_K + 3] * this->P_ptr[stride_P + 3];
+            temp_double += this->K_ptr[stride_K + 4] * this->P_ptr[stride_P + 4];
+            temp_double += this->K_ptr[stride_K + 5] * this->P_ptr[stride_P + 5];
+            temp_double += this->K_ptr[stride_K + 6] * this->P_ptr[stride_P + 6];
+            dense_output->Q_ptr[stride_Q + 2] = temp_double;
+
+            // P = 3
+            stride_P    += this->n_stages_p1;
+            temp_double  = this->K_ptr[stride_K]     * this->P_ptr[stride_P];
+            temp_double += this->K_ptr[stride_K + 1] * this->P_ptr[stride_P + 1];
+            temp_double += this->K_ptr[stride_K + 2] * this->P_ptr[stride_P + 2];
+            temp_double += this->K_ptr[stride_K + 3] * this->P_ptr[stride_P + 3];
+            temp_double += this->K_ptr[stride_K + 4] * this->P_ptr[stride_P + 4];
+            temp_double += this->K_ptr[stride_K + 5] * this->P_ptr[stride_P + 5];
+            temp_double += this->K_ptr[stride_K + 6] * this->P_ptr[stride_P + 6];
+            dense_output->Q_ptr[stride_Q + 3] = temp_double;
+
+            break;
+        case(2):
+            // DOP853
+            // TODO
+            break;
+        default:
+            for (unsigned int P_i = 0; P_i < this->len_Pcols; P_i++)
             {
-                temp_double += this->K_ptr[stride_K + n_i] * this->P_ptr[stride_P + n_i];
-            }
+                const unsigned int stride_P = P_i * this->n_stages_p1;
 
-            // Set equal to Q
-            dense_output->Q_ptr[stride_Q + P_i] = temp_double;
+                // Initialize dot product
+                double temp_double = 0.0;
+
+
+                for (unsigned int n_i = 0; n_i < this->n_stages_p1; n_i++)
+                {
+                    temp_double += this->K_ptr[stride_K + n_i] * this->P_ptr[stride_P + n_i];
+                }
+
+                // Set equal to Q
+                dense_output->Q_ptr[stride_Q + P_i] = temp_double;
+            }
+            break;
         }
     }
 
@@ -763,6 +849,7 @@ void RK23::reset()
     this->len_Pcols = RK23_len_Pcols;
     this->error_estimator_order = RK23_error_estimator_order;
     this->error_exponent = RK23_error_exponent;
+    this->method_int = RK23_METHOD_INT;
 
     RKSolver::reset();
 }
@@ -790,6 +877,7 @@ void RK45::reset()
     this->len_Pcols = RK45_len_Pcols;
     this->error_estimator_order = RK45_error_estimator_order;
     this->error_exponent = RK45_error_exponent;
+    this->method_int = RK45_METHOD_INT;
 
     RKSolver::reset();
 }
@@ -816,6 +904,7 @@ void DOP853::reset()
     this->len_C     = DOP853_len_C;
     this->error_estimator_order = DOP853_error_estimator_order;
     this->error_exponent = DOP853_error_exponent;
+    this->method_int = DOP853_METHOD_INT;
 
     RKSolver::reset();
 }
@@ -967,7 +1056,6 @@ void RKDenseOutput::call(double t_interp, double* y_interped)
             cumlative_prod *= step_factor;
             temp_double += this->Q_ptr[Q_stride + i] * cumlative_prod;
         }
-
         y_interped[y_i] = this->y_stored_ptr[y_i] + this->step * temp_double;
     }
 }

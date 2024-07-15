@@ -32,10 +32,10 @@ protected:
     // Buffer
     unsigned int current_data_buffer_size  = 0;
     unsigned int current_dense_buffer_size = 0;
-    double* data_buffer_time_ptr     = &data_buffer_time[0];
-    double* data_buffer_y_ptr        = &data_buffer_y[0];
-    double* data_buffer_interp_time_ptr     = &data_buffer_interp_time[0];
-    std::shared_ptr<CySolverDense>* data_buffer_dense_ptr = &data_buffer_dense_output[0];
+    double* data_buffer_time_ptr           = &data_buffer_time[0];
+    double* data_buffer_y_ptr              = &data_buffer_y[0];
+    double* data_buffer_interp_time_ptr    = &data_buffer_interp_time[0];
+    CySolverDense** data_buffer_dense_ptr  = &data_buffer_dense_output[0];
 
     // Dense Output
     bool capture_dense_output = false;
@@ -73,17 +73,17 @@ public:
     std::vector<double> solution    = std::vector<double>(0);
 
     // Dense output array
-    std::vector<std::shared_ptr<CySolverDense>> dense_vector = std::vector<std::shared_ptr<CySolverDense>>(0);
+    std::vector<CySolverDense*> dense_vector = std::vector<CySolverDense*>(0);
 
     // Interpolant time array (used if t_eval is provided)
     std::vector<double> interp_time = std::vector<double>(0);
 
 private:
     // Put data buffers at the end of memory stack
-    double data_buffer_time[BUFFER_SIZE]                                 = { };
-    double data_buffer_y[BUFFER_SIZE * DY_LIMIT]                         = { };
-    std::shared_ptr<CySolverDense> data_buffer_dense_output[BUFFER_SIZE] = { };
-    double data_buffer_interp_time[BUFFER_SIZE]                          = { };
+    double data_buffer_time[BUFFER_SIZE]                 = { };
+    double data_buffer_y[BUFFER_SIZE * DY_LIMIT]         = { };
+    CySolverDense* data_buffer_dense_output[BUFFER_SIZE] = { };
+    double data_buffer_interp_time[BUFFER_SIZE]          = { };
 
 
 // Methods
@@ -105,7 +105,7 @@ public:
         const bool capture_dense_output,
         const bool t_eval_provided);
     void save_data(const double new_t, double* const new_solution_y_ptr, double* const new_solution_dy_ptr);
-    void save_dense(const double sol_t, std::shared_ptr<CySolverDense> const dense_output_ptr);
+    void save_dense(const double sol_t, CySolverDense* dense_output_ptr);
     void finalize();
     void reset();
     void update_message(const char* const new_message_ptr);

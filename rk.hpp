@@ -540,7 +540,7 @@ protected:
 protected:
     virtual void p_estimate_error() override;
     virtual void p_step_implementation() override;
-    virtual std::shared_ptr<CySolverDense> p_dense_output() override;
+    virtual CySolverDense* p_dense_output() override;
 
 public:
     RKSolver();

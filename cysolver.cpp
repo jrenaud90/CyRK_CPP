@@ -37,21 +37,21 @@ CySolverBase::CySolverBase(
     const bool dense_output,
     const double* t_eval,
     const size_t len_t_eval) :
-        status(0),
-        num_y(num_y),
-        num_extra(num_extra),
-        t_start(t_start),
-        t_end(t_end),
-        storage_ptr(storage_ptr),
-        diffeq_ptr(diffeq_ptr),
-        args_ptr(args_ptr),
-        dense_output(dense_output),
-        t_eval(t_eval),
-        len_t_eval(len_t_eval)
-{   
+    status(0),
+    num_y(num_y),
+    num_extra(num_extra),
+    t_start(t_start),
+    t_end(t_end),
+    storage_ptr(storage_ptr),
+    diffeq_ptr(diffeq_ptr),
+    args_ptr(args_ptr),
+    dense_output(dense_output),
+    t_eval(t_eval),
+    len_t_eval(len_t_eval)
+{
     // Parse inputs
     this->capture_extra = num_extra > 0;
-    
+
     // Setup storage
     this->storage_ptr->update_message("CySolverBase Initializing.");
 
@@ -197,10 +197,10 @@ void CySolverBase::reset()
     this->storage_ptr->save_data(this->t_now_ptr[0], this->y_now_ptr, this->dy_now_ptr);
     
     // Construct interpolator based using this step as a data point.
-    std::shared_ptr<CySolverDense> dense_output_shptr = this->p_dense_output();
+    CySolverDense* dense_output_ptr = this->p_dense_output();
 
     // Save interpolator
-    this->storage_ptr->save_dense(this->t_now_ptr[0], dense_output_shptr);
+    this->storage_ptr->save_dense(this->t_now_ptr[0], dense_output_ptr);
 
 
     this->reset_called = true;
@@ -247,10 +247,10 @@ void CySolverBase::take_step()
             if (this->dense_output)
             {
                 // Construct interpolator based using this step as a data point.
-                std::shared_ptr<CySolverDense> dense_output_shptr = this->p_dense_output();
+                CySolverDense* dense_output_ptr = this->p_dense_output();
 
                 // Save interpolator
-                this->storage_ptr->save_dense(this->t_now_ptr[0], dense_output_shptr);
+                this->storage_ptr->save_dense(this->t_now_ptr[0], dense_output_ptr);
             }
 
             // Save data
@@ -332,9 +332,9 @@ void CySolverBase::solve()
 }
 
 /* Dense Output Methods */
-std::shared_ptr<CySolverDense> CySolverBase::p_dense_output()
+CySolverDense* CySolverBase::p_dense_output()
 {
-    return std::make_shared<CySolverDense>(this->t_old, this->t_now_ptr[0], this->y_old_ptr, this->num_y);
+    return new CySolverDense(this->t_old, this->t_now_ptr[0], this->y_old_ptr, this->num_y);
 }
 
 

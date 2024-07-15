@@ -57,6 +57,18 @@ CySolverResult::~CySolverResult()
 {
     // Vector header inforamtion is stack allocated, no need to delete them.
     // The data itself is heap allocated but the vector class will handle that.
+
+    // Need to delete the heap allocated dense solutions
+    if (this->capture_extra)
+    {
+        for (size_t i = 0; i < this->num_interpolates; i++)
+        {
+            if (this->dense_vector[i])
+            {
+                delete this->dense_vector[i];
+            }
+        }
+    }
 }
 
 
@@ -140,7 +152,8 @@ void CySolverResult::reset()
     }
 
     // Set the storage size to the original expected size.
-    this->storage_capacity = this->original_expected_size;
+    this->storage_capacity       = this->original_expected_size;
+    this->dense_storage_capacity = this->original_expected_size;
 
     // Reserve the memory for the vectors
     try
@@ -149,11 +162,11 @@ void CySolverResult::reset()
         this->solution.reserve(this->storage_capacity * this->num_dy);
         if (this->capture_dense_output)
         {
-            this->dense_vector.reserve(this->storage_capacity);
+            this->dense_vector.reserve(this->dense_storage_capacity);
         }
         if (this->t_eval_provided)
         {
-            this->interp_time.reserve(this->storage_capacity);
+            this->interp_time.reserve(this->dense_storage_capacity);
         }
     }
     catch (std::bad_alloc const&)
@@ -241,7 +254,7 @@ void CySolverResult::save_data(const double new_t, double* const new_solution_y_
     this->current_data_buffer_size++;
 }
 
-void CySolverResult::save_dense(const double sol_t, std::shared_ptr<CySolverDense> const dense_output_ptr)
+void CySolverResult::save_dense(const double sol_t, CySolverDense* dense_output_ptr)
 {
     // Check if our data buffer is full
     if (this->current_dense_buffer_size >= BUFFER_SIZE)
@@ -283,7 +296,7 @@ void CySolverResult::finalize()
         this->solution.shrink_to_fit();
     }
 
-    if (this->num_interpolates > 100000)
+    if (this->num_interpolates > 10000)
     {
         if (this->capture_dense_output)
         {

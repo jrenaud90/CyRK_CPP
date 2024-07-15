@@ -16,7 +16,7 @@ public:
     unsigned int num_y = 0;
 
     // Stored y values at interpolation step
-    double y_stored[Y_LIMIT] = {};
+    double y_stored[Y_LIMIT] = { };
     double* y_stored_ptr     = &y_stored[0];
 
 /* Methods */

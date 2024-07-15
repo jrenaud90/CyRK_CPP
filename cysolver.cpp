@@ -206,8 +206,12 @@ void CySolverBase::reset()
     this->storage_ptr->reset();
     this->storage_ptr->update_message("CySolverStorage reset, ready for data.");
 
-    // Store initial conditions
-    this->storage_ptr->save_data(this->t_now_ptr[0], this->y_now_ptr, this->dy_now_ptr);
+    // If t_eval is set then don't save initial conditions. They will be captured during stepping.
+    if (!this->use_t_eval)
+    {
+        // Store initial conditions
+        this->storage_ptr->save_data(this->t_now_ptr[0], this->y_now_ptr, this->dy_now_ptr);
+    }
     
     // Construct interpolator using t0 and y0 as its data point
     if (this->use_dense_output)
@@ -257,6 +261,9 @@ void CySolverBase::take_step()
         else
         {
             // ** Make call to solver's step implementation **
+            bool save_data = true;
+            bool prepare_for_next_step = true;
+
             this->p_step_implementation();
             this->len_t++;
 
@@ -284,6 +291,9 @@ void CySolverBase::take_step()
                 
                 if (this->use_t_eval)
                 {
+                    // Don't save data at the end
+                    save_data = false;
+
                     // Need to step through t_eval and call dense to determine correct data at each t_eval step.
                     // Find the first index in t_eval that is close to current time.
                     size_t t_eval_index_new = 1 + binary_search_with_guess(this->t_now_ptr[0], this->t_eval_ptr, this->len_t_eval, this->t_eval_index_old);
@@ -297,23 +307,23 @@ void CySolverBase::take_step()
                         // There are steps we need to interpolate over.
                         // Start with the old time and add t_eval step sizes until we are done.
                         // Create a y array and dy_array to use during interpolation
-                        double y_interp[Y_LIMIT]          = { };
-                        double* y_interp_ptr              = &y_interp[0];
+                        double y_interp[Y_LIMIT] = { };
+                        double* y_interp_ptr     = &y_interp[0];
 
                         // If capture extra is set to true then we need to hold onto a copy of the current state
                         // The current state pointers must be overwritten if extra output is to be captured.
-                        double y_holder[Y_LIMIT]          = { };
-                        double* y_holder_ptr              = &y_holder[0];
-                        double dy_interp_holder[DY_LIMIT] = { };
-                        double* dy_interp_holder_ptr      = &dy_interp_holder[0];
-                        double time_holder                = 0;
+                        // However we need a copy of the current state pointers at the end of this step anyways. So just
+                        // store them now and skip storing them later.
 
                         if (this->capture_extra)
                         {
                             // We need to copy the current state of y, dy, and time
-                            time_holder = this->t_now_ptr[0];
-                            std::memcpy(y_holder_ptr, this->y_now_ptr, sizeof(double) * this->num_y);
-                            std::memcpy(dy_interp_holder_ptr, this->dy_now_ptr, sizeof(double) * this->num_dy);
+                            this->t_old = this->t_now_ptr[0];
+                            std::memcpy(this->y_old_ptr, this->y_now_ptr, sizeof(double) * this->num_y);
+                            std::memcpy(this->dy_old_ptr, this->dy_now_ptr, sizeof(double) * this->num_dy);
+
+                            // Don't update these again at the end
+                            prepare_for_next_step = false;
                         }
 
                         for (size_t i = 0; i < t_eval_index_delta; i++)
@@ -341,32 +351,24 @@ void CySolverBase::take_step()
                             // Save interpolated data to storage. If capture extra is true then dy_now holds those extra values. If it is false then it won't hurt to pass dy_now to storage.
                             this->storage_ptr->save_data(t_interp, y_interp_ptr, this->dy_now_ptr);
                         }
-
-                        // Load back copies into state variables
-                        if (this->capture_extra)
-                        {
-                            this->t_now_ptr[0] = time_holder;
-                            std::memcpy(this->y_now_ptr, y_holder_ptr, sizeof(double) * this->num_y);
-                            std::memcpy(this->dy_now_ptr, dy_interp_holder_ptr, sizeof(double) * this->num_dy);
-                        }
                     }
-
                     // Update the old index for the next step
                     this->t_eval_index_old = t_eval_index_new;
-
                 }
-
             }
-            if (!this->use_t_eval)
+            if (save_data)
             {
                 // No data has been saved from the current step. Save the integrator data for this step as the solution.
                 this->storage_ptr->save_data(this->t_now_ptr[0], this->y_now_ptr, this->dy_now_ptr);
             }
 
-            // Prep for next step
-            this->t_old = this->t_now_ptr[0];
-            std::memcpy(this->y_old_ptr, this->y_now_ptr, sizeof(double) * this->num_y);
-            std::memcpy(this->dy_old_ptr, this->dy_now_ptr, sizeof(double) * this->num_dy);
+            if (prepare_for_next_step)
+            {
+                // Prep for next step
+                this->t_old = this->t_now_ptr[0];
+                std::memcpy(this->y_old_ptr, this->y_now_ptr, sizeof(double) * this->num_y);
+                std::memcpy(this->dy_old_ptr, this->dy_now_ptr, sizeof(double) * this->num_dy);
+            }
         }
 
     }

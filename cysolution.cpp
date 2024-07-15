@@ -347,7 +347,7 @@ void CySolverResult::call(const double t, double* y_interp)
         // TODO: See if this holds for backwards integration and update if needed.
         // Get a guess for binary search
         size_t closest_index = (size_t)std::floor(interp_time_len_touse * t / this->last_t);
-        closest_index = 1 + binary_search_with_guess(t, interp_time_touse_ptr, interp_time_len_touse, closest_index);
+        closest_index = 2 + binary_search_with_guess(t, interp_time_touse_ptr, interp_time_len_touse, closest_index);
     
         // Clean up closest index
         closest_index = std::min<size_t>(std::max<size_t>(closest_index - 1, 0), interp_time_len_touse - 1);

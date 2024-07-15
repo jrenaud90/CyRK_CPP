@@ -3,15 +3,43 @@
 #include <chrono>
 #include <cstring>
 
+#include <cmath>
 #include "cysolve.hpp"
+
+static void test_accur_diffeq(double* dy_ptr, double time, double* y_ptr, const double* args_ptr)
+{
+    const double y0 = y_ptr[0];
+    const double y1 = y_ptr[1];
+
+    dy_ptr[0] = std::sin(time) - y1;
+    dy_ptr[1] = std::cos(time) + y0;
+}
 
 static void test_diffeq(double* dy_ptr, double time, double* y_ptr, const double* args_ptr)
 {
     const double y0 = y_ptr[0];
     const double y1 = y_ptr[1];
 
-    dy_ptr[0] = (1. - 0.01 * y1) * y0;
-    dy_ptr[1] = (0.02 * y0 - 1.) * y1;
+    const double e1 = (1. - 0.01 * y1);
+    const double e2 = (0.02 * y0 - 1.);
+
+    dy_ptr[0] = e1 * y0;
+    dy_ptr[1] = e2 * y1;
+}
+
+static void test_extra_diffeq(double* dy_ptr, double time, double* y_ptr, const double* args_ptr)
+{
+    const double y0 = y_ptr[0];
+    const double y1 = y_ptr[1];
+
+    const double e1 = (1. - 0.01 * y1);
+    const double e2 = (0.02 * y0 - 1.);
+
+    dy_ptr[0] = e1 * y0;
+    dy_ptr[1] = e2 * y1;
+
+    dy_ptr[2] = e1;
+    dy_ptr[3] = e2;
 }
 
 
@@ -54,6 +82,7 @@ int main(){
     int max_i = 1000;
     
     double y0[2] = {20.0, 20.0};
+    //double y0[2] = { 0.0, 1.0 };
     double* y0_ptr = &y0[0];
     char msg[512];
     char* msg_ptr = &msg[0];
@@ -87,7 +116,7 @@ int main(){
     auto t1 = std::chrono::high_resolution_clock::now();
     auto t2 = std::chrono::high_resolution_clock::now();
     int k = 0;
-    int k_max = 20;
+    int k_max = 15;
     double total_runner = 0.0;
     double t_at_20;
     double y_at_20[2] = { -99.0, -99.0 };
@@ -124,7 +153,7 @@ int main(){
             msg_ptr = result->message_ptr;
             num_interps = result->num_interpolates;
             t_at_20 = result->time_domain[4];
-            y_at_20_ptr = &result->solution[2 * 4];
+            y_at_20_ptr = &result->solution[(num_y + num_extra) * 4];
             result->call(t_at_20, y_int_at_20_ptr);
 
             //std::cout << result->message_ptr << std::endl;
@@ -160,7 +189,7 @@ int main(){
     {
         std::cout << "Could not open data file." << std::endl;
     }
-    datastream.precision(6);
+    datastream.precision(32);
 
     for (size_t i = 0; i < final_size; i++)
     {

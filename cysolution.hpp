@@ -17,17 +17,10 @@ protected:
     // Message storage
     char message[MESSAGE_SIZE] = { };
 
-    // Metadata
-    unsigned int num_extra = 0;
-    double num_dy_dbl      = 0.0;
-
     // Current storage information
     size_t original_expected_size = 0;
     size_t storage_capacity       = 0;
     size_t dense_storage_capacity = 0;
-
-    // Storage for arrays
-    bool capture_extra = false;
 
     // Buffer
     unsigned int current_data_buffer_size  = 0;
@@ -36,11 +29,18 @@ protected:
     double* data_buffer_y_ptr              = &data_buffer_y[0];
     double* data_buffer_interp_time_ptr    = &data_buffer_interp_time[0];
     CySolverDense** data_buffer_dense_ptr  = &data_buffer_dense_output[0];
+    
+    // Metadata
+    size_t last_t          = 0;
+    double num_dy_dbl      = 0.0;
+    unsigned int num_extra = 0;
 
+    // Storage for arrays
+    bool capture_extra = false;
+    
     // Dense Output
     bool capture_dense_output = false;
     bool t_eval_provided      = false;
-    size_t last_t = 0;
 
 public:
     // Status information
@@ -59,14 +59,14 @@ public:
     // -50   : Error calling cython wrapper function from PySolver.
     int error_code = -999;
 
-    // More status information
-    char* message_ptr = &message[0];
-    size_t size             = 0;
-    size_t num_interpolates = 0;
-
     // Metadata
     unsigned int num_y    = 0;
     unsigned int num_dy   = 0;
+
+    // More status information
+    char* message_ptr = &message[0];
+    size_t size = 0;
+    size_t num_interpolates = 0;
 
     // Pointer to storage arrays
     std::vector<double> time_domain = std::vector<double>(0);

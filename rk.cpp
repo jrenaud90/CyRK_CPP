@@ -46,14 +46,14 @@ RKSolver::RKSolver(
         
 {
     // Check for errors
-    if (this->user_provided_first_step_size != 0.0)
+    if (this->user_provided_first_step_size != 0.0) [[unlikely]]
     {
-        if (this->user_provided_first_step_size < 0.0)
+        if (this->user_provided_first_step_size < 0.0) [[unlikely]]
         {
             this->storage_ptr->error_code = -1;
             this->storage_ptr->update_message("User-provided initial step size must be a positive number.");
         }
-        else if (first_step_size > (this->t_delta_abs * 0.5))
+        else if (first_step_size > (this->t_delta_abs * 0.5)) [[unlikely]]
         {
             this->storage_ptr->error_code = -1;
             this->storage_ptr->update_message("User-provided initial step size must be smaller than 50 % of the time span size.");
@@ -71,7 +71,7 @@ RKSolver::RKSolver(
         for (unsigned int y_i = 0; y_i < this->num_y; y_i++)
         {
             double temp_double = rtols_ptr[y_i];
-            if (temp_double < EPS_100)
+            if (temp_double < EPS_100) [[unlikely]]
             {
                 temp_double = EPS_100;
             }
@@ -81,7 +81,7 @@ RKSolver::RKSolver(
     else {
         // only one rtol
         double temp_double = rtol;
-        if (temp_double < EPS_100)
+        if (temp_double < EPS_100) [[unlikely]]
         {
             temp_double = EPS_100;
         }
@@ -156,7 +156,7 @@ void RKSolver::p_estimate_error()
             error_dot += this->E_ptr[6] * this->K_ptr[stride_K + 6];
 
             break;
-        default:
+        [[unlikely]] default:
             // Resort to unrolled loops
             // Initialize
             error_dot = 0.0;
@@ -187,14 +187,14 @@ void RKSolver::p_step_implementation()
     // Run RK integration step
     
     // Create local variables instead of calling class attributes for pointer objects.
-    double* l_K_ptr       = this->K_ptr;
-    const double* l_A_ptr = this->A_ptr;
-    const double* l_B_ptr = this->B_ptr;
-    const double* l_C_ptr = this->C_ptr;
-    double* l_y_now_ptr   = this->y_now_ptr;
-    double* l_y_old_ptr   = this->y_old_ptr;
-    double* l_dy_now_ptr  = this->dy_now_ptr;
-    double* l_dy_old_ptr  = this->dy_old_ptr;
+    double* const l_K_ptr       = this->K_ptr;
+    const double* const l_A_ptr = this->A_ptr;
+    const double* const l_B_ptr = this->B_ptr;
+    const double* const l_C_ptr = this->C_ptr;
+    double* const l_y_now_ptr   = this->y_now_ptr;
+    double* const l_y_old_ptr   = this->y_old_ptr;
+    double* const l_dy_now_ptr  = this->dy_now_ptr;
+    double* const l_dy_old_ptr  = this->dy_old_ptr;
 
     // Other local variables
     double l_t_old     = this->t_old;
@@ -222,7 +222,7 @@ void RKSolver::p_step_implementation()
 
         // Check if step size is too small
         // This will cause integration to fail: step size smaller than spacing between numbers
-        if (l_step_size < min_step_size) {
+        if (l_step_size < min_step_size) [[unlikely]] {
             step_error = true;
             this->status = -1;
             break;
@@ -231,14 +231,14 @@ void RKSolver::p_step_implementation()
         // Move time forward for this particular step size
         double t_delta_check;
         if (this->direction_flag) {
-            l_step    = l_step_size;
-            this->t_now_ptr[0]   = l_t_old + l_step;
-            t_delta_check = this->t_now_ptr[0] - this->t_end;
+            l_step             = l_step_size;
+            this->t_now_ptr[0] = l_t_old + l_step;
+            t_delta_check      = this->t_now_ptr[0] - this->t_end;
         }
         else {
-            l_step    = -l_step_size;
-            this->t_now_ptr[0]   = l_t_old + l_step;
-            t_delta_check = this->t_end - this->t_now_ptr[0];
+            l_step             = -l_step_size;
+            this->t_now_ptr[0] = l_t_old + l_step;
+            t_delta_check      = this->t_end - this->t_now_ptr[0];
         }
 
         // Check that we are not at the end of integration with that move
@@ -440,7 +440,7 @@ void RKSolver::p_step_implementation()
                     // j = 10
                     temp_double += l_A_ptr[stride_A + 10] * l_K_ptr[stride_K + 10];
                     break;
-                default:
+                [[unlikely]] default:
                     // Resort to regular rolled loops
                     // Initialize
                     temp_double = 0.0;
@@ -506,7 +506,7 @@ void RKSolver::p_step_implementation()
                 temp_double += l_B_ptr[10] * l_K_ptr[stride_K + 10];
                 temp_double += l_B_ptr[11] * l_K_ptr[stride_K + 11];
                 break;
-            default:
+            [[unlikely]] default:
                 // Resort to rolled loops
                 // Initialize
                 temp_double = 0.0;
@@ -566,11 +566,13 @@ void RKSolver::p_step_implementation()
     }
 
     // Update status depending if there were any errors.
-    if (step_error) {
+    if (step_error) [[unlikely]]
+    {
         // Issue with step convergence
         this->status = -1;
     }
-    else if (!step_accepted) {
+    else if (!step_accepted) [[unlikely]]
+    {
         // Issue with step convergence
         this->status = -7;
     }
@@ -596,7 +598,7 @@ void RKSolver::reset()
     CySolverBase::reset();
 
     // Update initial step size
-    if (this->user_provided_first_step_size == 0.0)
+    if (this->user_provided_first_step_size == 0.0) [[likely]]
     {
         // User did not provide a step size. Try to find a good guess.
         this->calc_first_step_size();
@@ -614,7 +616,7 @@ void RKSolver::calc_first_step_size()
             Equations I: Nonstiff Problems", Sec. II.4.
     */
 
-    if (this->num_y == 0)
+    if (this->num_y == 0) [[unlikely]]
     {
         this->step_size = INF;
     }
@@ -800,7 +802,7 @@ void RKSolver::p_update_Q(double* Q_ptr) const
             // DOP853
             // TODO
             break;
-        default:
+        [[unlikely]] default:
             for (unsigned int P_i = 0; P_i < this->len_Pcols; P_i++)
             {
                 const unsigned int stride_P = P_i * this->n_stages_p1;

@@ -110,7 +110,7 @@ std::shared_ptr<CySolverResult> baseline_cysolve_ivp(
             rtol, atol, rtols_ptr, atols_ptr, max_step_size, first_step_size
         );
         break;
-    default:
+    [[unlikely]] default:
         error = true;
         solution_ptr->success = false;
         solution_ptr->error_code = -3;
@@ -118,6 +118,9 @@ std::shared_ptr<CySolverResult> baseline_cysolve_ivp(
         return solution_ptr;
         break;
     }
+
+    // Call reset on solver
+    solver->reset();
 
     // Run integrator
     solver->solve();
@@ -256,12 +259,12 @@ PySolver::PySolver(
             max_step_size,
             first_step_size);
         break;
-    default:
+    [[unlikely]] default:
         this->status = -1;
         break;
     }
 
-    if (this->solver)
+    if (this->solver) [[likely]]
     {
         // Add in python hooks
         this->solver->set_cython_extension_instance(cython_extension_class_instance, cython_extension_class_diffeq_method);
@@ -288,7 +291,7 @@ PySolverStatePointers PySolver::get_state_pointers() const
 void PySolver::solve()
 {
     // Run integrator
-    if (this->solver)
+    if (this->solver) [[likely]]
     {
         this->solver->solve();
     }

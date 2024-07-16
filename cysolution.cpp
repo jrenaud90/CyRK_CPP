@@ -63,7 +63,7 @@ CySolverResult::~CySolverResult()
     {
         for (size_t i = 0; i < this->num_interpolates; i++)
         {
-            if (this->dense_vector[i])
+            if (this->dense_vector[i]) [[likely]]
             {
                 delete this->dense_vector[i];
             }
@@ -78,7 +78,7 @@ void CySolverResult::p_expand_data_storage()
     double new_storage_size_dbl = std::floor(DYNAMIC_GROWTH_RATE * this->storage_capacity);
 
     // Check if this new size is okay.
-    if ((new_storage_size_dbl / this->num_dy_dbl) > SIZE_MAX_DBL)
+    if ((new_storage_size_dbl / this->num_dy_dbl) > SIZE_MAX_DBL) [[unlikely]]
     {
         this->error_code = -11;
         this->update_message("Value Error: Requested new vector size is larger than the limits set by the system (specifically the max of size_t).");
@@ -108,7 +108,7 @@ void CySolverResult::p_expand_dense_storage()
     double new_storage_size_dbl = std::floor(DYNAMIC_GROWTH_RATE * this->dense_storage_capacity);
 
     // Check if this new size is okay.
-    if ((new_storage_size_dbl) > SIZE_MAX_DBL)
+    if ((new_storage_size_dbl) > SIZE_MAX_DBL) [[unlikely]]
     {
         this->error_code = -12;
         this->update_message("Value Error: Requested new vector size is larger than the limits set by the system (specifically the max of size_t).");
@@ -140,7 +140,7 @@ void CySolverResult::p_expand_dense_storage()
 void CySolverResult::reset()
 {
     // Inititalize the storage array
-    if (this->reset_called)
+    if (this->reset_called) [[unlikely]]
     {
         // The storage array may have already been set. Delete any data and reset it.
         this->time_domain.clear();
@@ -322,7 +322,7 @@ void CySolverResult::update_message(const char* const new_message_ptr)
 
 void CySolverResult::call(const double t, double* y_interp)
 {
-    if (!this->capture_dense_output)
+    if (!this->capture_dense_output) [[unlikely]]
     {
         this->error_code = -80;
         this->update_message("Can not call solution when dense output is not saved.");
@@ -347,6 +347,8 @@ void CySolverResult::call(const double t, double* y_interp)
         // TODO: See if this holds for backwards integration and update if needed.
         // Get a guess for binary search
         size_t closest_index = (size_t)std::floor(interp_time_len_touse * t / this->last_t);
+
+        // For some reason I only get right results when adding "2+" instead of "1+" to this index...
         closest_index = 2 + binary_search_with_guess(t, interp_time_touse_ptr, interp_time_len_touse, closest_index);
     
         // Clean up closest index

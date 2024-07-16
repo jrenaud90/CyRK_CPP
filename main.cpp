@@ -1,3 +1,4 @@
+/* This file and its functions are just used for crude testing. It is not considered truely apart of CyRK's C++ backend. */
 #include <iostream>
 #include <fstream>
 #include <chrono>
@@ -69,47 +70,50 @@ std::vector<double> linspace(double start, double end, size_t num_in)
     return linspaced;
 }
 
-int main(){
-    //std::cout << "Running..." << std::endl;
-
-
+void test_regular(
+        double t_end = 500.0,
+        bool save_dense = false,
+        size_t len_t_eval = 0, // 7070 == 2x; 1767 == 0.5x for tspan of (0, 500))
+        unsigned int num_extra = 0
+        )
+{
     DiffeqFuncType diffeq_func = test_diffeq;
-
-
-    double time_span[2] = {0.0, 500.0};
+    if (num_extra > 0)
+    {
+        DiffeqFuncType diffeq_func = test_extra_diffeq;
+    }
+    
+    
+    double time_span[2] = { 0.0, t_end };
     double* time_span_ptr = &time_span[0];
+
     unsigned int method = 1;
     int max_i = 1000;
-    
-    double y0[2] = {20.0, 20.0};
-    //double y0[2] = { 0.0, 1.0 };
+
+    double y0[2] = { 20.0, 20.0 };
     double* y0_ptr = &y0[0];
     char msg[512];
     char* msg_ptr = &msg[0];
 
     unsigned int num_y = 2;
-    unsigned int num_extra = 0;
 
     double rtol = 1.0e-7;
     double atol = 1.0e-8;
-    
+
     size_t expected_size = 0;
-    
+
     double running_sum = 0.0;
     size_t final_size;
     size_t sol_size;
     size_t num_interps = 0;
 
-
-    const bool dense_output = true;
-
-
-    size_t len_t_eval = 7070;  // 7070 == 2x; 1767 == 0.5x for tspan of (0, 500)
-    std::vector<double> t_eval = linspace(time_span_ptr[0], time_span_ptr[1], len_t_eval);
-    const double* t_eval_ptr = &t_eval[0];
-
-    //len_t_eval = 0;
-    //t_eval_ptr = nullptr;
+    const double* t_eval_ptr = nullptr;
+    std::vector<double> t_eval = std::vector<double>(0);
+    if (len_t_eval > 0)
+    {
+        t_eval = linspace(time_span_ptr[0], time_span_ptr[1], len_t_eval);
+        t_eval_ptr = &t_eval[0];
+    }
 
     std::shared_ptr<CySolverResult> result;
 
@@ -140,7 +144,7 @@ int main(){
                 expected_size,
                 num_extra,
                 nullptr,
-                dense_output,
+                save_dense,
                 t_eval_ptr,
                 len_t_eval,
                 100000,
@@ -181,7 +185,7 @@ int main(){
 
     std::cout << "Done! Final Avg: " << total_runner / (k_max - 4) << std::endl << "Saving data..." << std::endl;
 
-    
+
     std::ofstream datastream;
 
     datastream.open("out.dat");
@@ -199,6 +203,44 @@ int main(){
     std::cout << "Data saved." << std::endl;
 
     //std::cin.get();
+}
+
+int main(){
+    /* This file and its functions are just used for crude testing. It is not considered truely apart of CyRK's C++ backend. */
+
+    /* Speed Runs (JPR Work Desktop):
+    * No Dense; No t_eval
+    *   603.95us; 610.87us
+    * 
+    * With Dense; No t_eval
+    *   1089.25us; 1094.09
+    * 
+    * With Dense; With 2x t_eval
+    *   1246.61us; 1239.9
+    * 
+    * With Dense; With 0.5x t_eval
+    *   1135.45us; 1136.49
+    *
+    * No Dense; With 0.5x t_eval
+    *   822.59us; 820.39
+    * 
+    * No Dense; With 2x t_eval
+    *   902.975us; 901.372
+    * 
+    * No Dense; With 2x t_eval; With extra on
+    *   1000.79us; 952.867; 941.13
+    * 
+    * No Dense; With 0.5x t_eval; With extra on
+    *   843.989us; 837.096
+    */
+
+    test_regular(
+        500.0,
+        false,
+        0, // len t_eval 7070 == 2x; 1767 == 0.5x for tspan of (0, 500))
+        0
+    );
+
 
     return 0;
 }

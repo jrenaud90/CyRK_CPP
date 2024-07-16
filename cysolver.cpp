@@ -164,7 +164,7 @@ bool CySolverBase::check_status() const
     }
 
     // Otherwise, check if the solution storage is in an error state.
-    if (this->storage_ptr)
+    if (this->storage_ptr) [[likely]]
     {
         if (this->storage_ptr->error_code != 0)
         {
@@ -230,7 +230,7 @@ void CySolverBase::reset()
 
 void CySolverBase::take_step()
 {    
-    if (!this->reset_called)
+    if (!this->reset_called) [[unlikely]]
     {
         // Reset must be called first.
         this->reset();
@@ -240,13 +240,13 @@ void CySolverBase::take_step()
 
     if (!this->status)
     {
-        if (this->t_now_ptr[0] == this->t_end)
+        if (this->t_now_ptr[0] == this->t_end) [[unlikely]]
         {
             // Integration finished
             this->t_old = this->t_end;
             this->status = 1;
         }
-        else if (this->len_t >= this->max_num_steps)
+        else if (this->len_t >= this->max_num_steps) [[unlikely]]
         {
             if (this->user_provided_max_num_steps)
             {
@@ -258,7 +258,7 @@ void CySolverBase::take_step()
                 this->status = -3;
             }
         }
-        else
+        else [[likely]]
         {
             // ** Make call to solver's step implementation **
             bool save_data = true;
@@ -298,7 +298,7 @@ void CySolverBase::take_step()
                     // Find the first index in t_eval that is close to current time.
                     size_t t_eval_index_new = 1 + binary_search_with_guess(this->t_now_ptr[0], this->t_eval_ptr, this->len_t_eval, this->t_eval_index_old);
                     // Check if there are any t_eval steps between this new index and the last index.
-                    int t_eval_index_delta = t_eval_index_new - this->t_eval_index_old;
+                    int t_eval_index_delta = (int)t_eval_index_new - (int)this->t_eval_index_old;
                     // If t_eval_index_delta == 0 then there are no new interpolations required between the last integration step and now.
                     // ^ In this case do not save any data, we are done with this step.
 
@@ -370,7 +370,6 @@ void CySolverBase::take_step()
                 std::memcpy(this->dy_old_ptr, this->dy_now_ptr, sizeof(double) * this->num_dy);
             }
         }
-
     }
 
     // Note this is not an "else" block because the integrator may have finished with that last step.
@@ -456,7 +455,7 @@ CySolverDense CySolverBase::p_dense_output_stack()
 void CySolverBase::set_cython_extension_instance(PyObject* cython_extension_class_instance, DiffeqMethod py_diffeq_method)
 {
     this->use_pysolver = true;
-    if (cython_extension_class_instance)
+    if (cython_extension_class_instance) [[likely]]
     {
         this->cython_extension_class_instance = cython_extension_class_instance;
         this->py_diffeq_method = py_diffeq_method;

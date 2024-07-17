@@ -143,11 +143,11 @@ void test_regular(
                 expected_size,
                 num_extra,
                 nullptr,
+                100000,
+                2000,
                 save_dense,
                 t_eval_ptr,
                 len_t_eval,
-                100000,
-                2000,
                 rtol,
                 atol
             );

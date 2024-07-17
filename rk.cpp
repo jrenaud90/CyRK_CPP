@@ -130,7 +130,7 @@ void RKSolver::p_estimate_error()
         }
 
         // Dot product between K and E
-        double error_dot;
+        double error_dot = 0.0;
         const unsigned int stride_K = y_i * this->n_stages_p1;
 
         switch (this->n_stages)
@@ -139,7 +139,7 @@ void RKSolver::p_estimate_error()
         // Note: DOP853 is handled in an override by its subclass.
         case(3):
             // RK23
-            error_dot =  this->E_ptr[0] * this->K_ptr[stride_K];
+            error_dot += this->E_ptr[0] * this->K_ptr[stride_K];
             error_dot += this->E_ptr[1] * this->K_ptr[stride_K + 1];
             error_dot += this->E_ptr[2] * this->K_ptr[stride_K + 2];
             error_dot += this->E_ptr[3] * this->K_ptr[stride_K + 3];
@@ -147,7 +147,7 @@ void RKSolver::p_estimate_error()
             break;
         case(6):
             // RK45
-            error_dot =  this->E_ptr[0] * this->K_ptr[stride_K];
+            error_dot += this->E_ptr[0] * this->K_ptr[stride_K];
             error_dot += this->E_ptr[1] * this->K_ptr[stride_K + 1];
             error_dot += this->E_ptr[2] * this->K_ptr[stride_K + 2];
             error_dot += this->E_ptr[3] * this->K_ptr[stride_K + 3];
@@ -158,10 +158,8 @@ void RKSolver::p_estimate_error()
             break;
         [[unlikely]] default:
             // Resort to unrolled loops
-            // Initialize
-            error_dot = 0.0;
             // New or Non-optimized RK method. default to for loop.
-            for (unsigned int j = 0; j < (this->n_stages + 1); j++)
+            for (unsigned int j = 0; j < this->n_stages_p1; j++)
             {
                 error_dot += this->E_ptr[j] * this->K_ptr[stride_K + j];
             }
@@ -182,6 +180,13 @@ void RKSolver::p_estimate_error()
 }
 
 
+    //     double error_norm_abs = std::fabs(error_dot) * scale_inv * this->step;
+
+    //     this->error_norm += (error_norm_abs * error_norm_abs);
+    // }
+    // this->error_norm = std::sqrt(this->error_norm) / this->num_y_sqrt;
+
+
 void RKSolver::p_step_implementation()
 {
     // Run RK integration step
@@ -196,17 +201,12 @@ void RKSolver::p_step_implementation()
     double* const l_dy_now_ptr  = this->dy_now_ptr;
     double* const l_dy_old_ptr  = this->dy_old_ptr;
 
-    // Other local variables
-    double l_t_old     = this->t_old;
-    double l_step      = this->step;
-    double l_step_size = this->step_size;
-
     // Determine step size based on previous loop
     // Find minimum step size based on the value of t (less floating point numbers between numbers when t is large)
-    const double min_step_size = 10. * std::fabs(std::nextafter(l_t_old, this->direction_inf) - l_t_old);
+    const double min_step_size = 10. * std::fabs(std::nextafter(this->t_old, this->direction_inf) - this->t_old);
     // Look for over/undershoots in previous step size
-    l_step_size = std::min<double>(l_step_size, this->max_step_size);
-    l_step_size = std::max<double>(l_step_size, min_step_size);
+    this->step_size = std::min<double>(this->step_size, this->max_step_size);
+    this->step_size = std::max<double>(this->step_size, min_step_size);
 
     // Optimization variables
     // Define a very specific A (Row 1; Col 0) now since it is called consistently and does not change.
@@ -222,7 +222,7 @@ void RKSolver::p_step_implementation()
 
         // Check if step size is too small
         // This will cause integration to fail: step size smaller than spacing between numbers
-        if (l_step_size < min_step_size) [[unlikely]] {
+        if (this->step_size < min_step_size) [[unlikely]] {
             step_error = true;
             this->status = -1;
             break;
@@ -231,13 +231,13 @@ void RKSolver::p_step_implementation()
         // Move time forward for this particular step size
         double t_delta_check;
         if (this->direction_flag) {
-            l_step             = l_step_size;
-            this->t_now_ptr[0] = l_t_old + l_step;
+            this->step             = this->step_size;
+            this->t_now_ptr[0] = this->t_old + this->step;
             t_delta_check      = this->t_now_ptr[0] - this->t_end;
         }
         else {
-            l_step             = -l_step_size;
-            this->t_now_ptr[0] = l_t_old + l_step;
+            this->step             = -this->step_size;
+            this->t_now_ptr[0] = this->t_old + this->step;
             t_delta_check      = this->t_end - this->t_now_ptr[0];
         }
 
@@ -246,12 +246,12 @@ void RKSolver::p_step_implementation()
             this->t_now_ptr[0] = this->t_end;
 
             // If we are, correct the step so that it just hits the end of integration.
-            l_step = this->t_now_ptr[0] - l_t_old;
+            this->step = this->t_now_ptr[0] - this->t_old;
             if (this->direction_flag) {
-                l_step_size = l_step;
+                this->step_size = this->step;
             }
             else {
-                l_step_size = -l_step;
+                this->step_size = -this->step;
             }
         }
 
@@ -263,7 +263,7 @@ void RKSolver::p_step_implementation()
 
         for (unsigned int s = 1; s < this->len_C; s++) {
             // Find the current time based on the old time and the step size.
-            this->t_now_ptr[0] = l_t_old + l_C_ptr[s] * l_step;
+            this->t_now_ptr[0] = this->t_old + l_C_ptr[s] * this->step;
             const unsigned int stride_A = s * this->len_Acols;
 
             for (unsigned int y_i = 0; y_i < this->num_y; y_i++)
@@ -452,7 +452,7 @@ void RKSolver::p_step_implementation()
                     break;
                 }
                 // Update value of y_now
-                l_y_now_ptr[y_i] = l_y_old_ptr[y_i] + (l_step * temp_double);
+                l_y_now_ptr[y_i] = l_y_old_ptr[y_i] + (this->step * temp_double);
             }
             // Call diffeq method to update K with the new dydt
             // This will use the now updated dy_now_ptr based on the values of y_now_ptr and t_now_ptr.
@@ -518,7 +518,7 @@ void RKSolver::p_step_implementation()
                 break;
             }
             // Update y_now
-            l_y_now_ptr[y_i] = l_y_old_ptr[y_i] + (l_step * temp_double);
+            l_y_now_ptr[y_i] = l_y_old_ptr[y_i] + (this->step * temp_double);
         }
 
         // Find final dydt for this timestep
@@ -540,7 +540,11 @@ void RKSolver::p_step_implementation()
             // We found our step size because the error is low!
             // Update this step for the next time loop
             double step_factor = this->max_step_factor;
-            if (this->error_norm != 0.0)
+            if (this->error_norm == 0.0)
+            {
+                 // Pass, leave as max.
+            }
+            else
             {
                 // Estimate a new step size based on the error.
                 const double error_safe = this->error_safety / std::pow(this->error_norm, this->error_exponent);
@@ -554,13 +558,13 @@ void RKSolver::p_step_implementation()
             }
 
             // Update step size
-            l_step_size *= step_factor;
+            this->step_size *= step_factor;
             step_accepted = true;
         }
         else {
             // Error is still large. Keep searching for a better step size.
             const double error_safe = this->error_safety / std::pow(this->error_norm, this->error_exponent);
-            l_step_size *= std::max<double>(this->min_step_factor, error_safe);
+            this->step_size *= std::max<double>(this->min_step_factor, error_safe);
             step_rejected = true;
         }
     }
@@ -579,8 +583,8 @@ void RKSolver::p_step_implementation()
 
     // End of RK step. 
     // Update state variables
-    this->step_size = l_step_size;
-    this->step      = l_step;
+    this->step_size = this->step_size;
+    this->step      = this->step;
 }
 
 
@@ -713,7 +717,7 @@ void RKSolver::p_update_Q(double* Q_ptr)
     // P has shape of (4, 3) for RK23; (7, 4) for RK45.. So (n_stages + 1, Q_order)
     // So Q has shape of (num_y, num_Pcols)
 
-    switch (this->method_int)
+    switch (this->integration_method)
     {
 
     case(0):
@@ -769,7 +773,7 @@ void RKSolver::p_update_Q(double* Q_ptr)
 
             // P = 1
             unsigned int stride_P = this->n_stages_p1;
-            temp_double = this->K_ptr[stride_K] * this->P_ptr[stride_P];
+            temp_double  = this->K_ptr[stride_K]     * this->P_ptr[stride_P];
             temp_double += this->K_ptr[stride_K + 1] * this->P_ptr[stride_P + 1];
             temp_double += this->K_ptr[stride_K + 2] * this->P_ptr[stride_P + 2];
             temp_double += this->K_ptr[stride_K + 3] * this->P_ptr[stride_P + 3];
@@ -780,7 +784,7 @@ void RKSolver::p_update_Q(double* Q_ptr)
 
             // P = 2
             stride_P += this->n_stages_p1;
-            temp_double = this->K_ptr[stride_K] * this->P_ptr[stride_P];
+            temp_double  = this->K_ptr[stride_K]     * this->P_ptr[stride_P];
             temp_double += this->K_ptr[stride_K + 1] * this->P_ptr[stride_P + 1];
             temp_double += this->K_ptr[stride_K + 2] * this->P_ptr[stride_P + 2];
             temp_double += this->K_ptr[stride_K + 3] * this->P_ptr[stride_P + 3];
@@ -791,7 +795,7 @@ void RKSolver::p_update_Q(double* Q_ptr)
 
             // P = 3
             stride_P += this->n_stages_p1;
-            temp_double = this->K_ptr[stride_K] * this->P_ptr[stride_P];
+            temp_double  = this->K_ptr[stride_K]     * this->P_ptr[stride_P];
             temp_double += this->K_ptr[stride_K + 1] * this->P_ptr[stride_P + 1];
             temp_double += this->K_ptr[stride_K + 2] * this->P_ptr[stride_P + 2];
             temp_double += this->K_ptr[stride_K + 3] * this->P_ptr[stride_P + 3];
@@ -804,7 +808,7 @@ void RKSolver::p_update_Q(double* Q_ptr)
         break;
 
     case(2):
-    {
+        {
         // DOP853
         // This method uses the current values stored in K and expands upon them by 3 more values determined by calls to the diffeq.
 
@@ -823,9 +827,9 @@ void RKSolver::p_update_Q(double* Q_ptr)
         double K_extended[Y_LIMIT * 3] = { };
         double* K_extended_ptr = &K_extended[0];
 
-
         // S (row) == 13
         // Solve for dy used to call diffeq
+        double temp_double_arr[Y_LIMIT * 2] = { };
         double temp_double;
         double temp_double_2;
         double temp_double_3;
@@ -839,14 +843,14 @@ void RKSolver::p_update_Q(double* Q_ptr)
             stride_K = this->n_stages_p1 * y_i;
             // Go up to a max of Row 13
             temp_double   = 0.0;
-            temp_double_2 = 0.0;
-            temp_double_3 = 0.0;
+            temp_double_arr[y_i * 2]     = 0.0;
+            temp_double_arr[y_i * 2 + 1] = 0.0;
             for (unsigned int n_i = 0; n_i < this->n_stages_p1; n_i++)
             {
                 K_ni = K_ptr[stride_K + n_i];
-                temp_double   += K_ni * DOP853_AEXTRA_ptr[3 * n_i];
-                temp_double_2 += K_ni * DOP853_AEXTRA_ptr[3 * n_i + 1];
-                temp_double_3 += K_ni * DOP853_AEXTRA_ptr[3 * n_i + 2];
+                temp_double                  += K_ni * DOP853_AEXTRA_ptr[3 * n_i];
+                temp_double_arr[y_i * 2]     += K_ni * DOP853_AEXTRA_ptr[3 * n_i + 1];
+                temp_double_arr[y_i * 2 + 1] += K_ni * DOP853_AEXTRA_ptr[3 * n_i + 2];
             }
 
             // Update y for diffeq call using the temp_double dot product.
@@ -865,11 +869,11 @@ void RKSolver::p_update_Q(double* Q_ptr)
 
             // Dot Product (K.T dot a) * h
             // Add row 14 to the remaining dot product trackers
-            temp_double_2 += K_ni * DOP853_AEXTRA_ptr[3 * 13 + 1];
-            temp_double_3 += K_ni * DOP853_AEXTRA_ptr[3 * 13 + 2];
+            temp_double_arr[y_i * 2]     += K_ni * DOP853_AEXTRA_ptr[3 * 13 + 1];
+            temp_double_arr[y_i * 2 + 1] += K_ni * DOP853_AEXTRA_ptr[3 * 13 + 2];
 
             // Update y for diffeq call
-            this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + temp_double_2 * this->step;
+            this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + temp_double_arr[y_i * 2] * this->step;
         }
         // Update time and call the diffeq.
         this->t_now_ptr[0] = this->t_old + (this->step * DOP853_CEXTRA_ptr[1]);
@@ -884,10 +888,10 @@ void RKSolver::p_update_Q(double* Q_ptr)
 
             // Dot Product (K.T dot a) * h            
             // Add row 15 to the remaining dot product trackers
-            temp_double_3 += K_ni * DOP853_AEXTRA_ptr[3 * 14 + 2];
+            temp_double_arr[y_i * 2 + 1] += K_ni * DOP853_AEXTRA_ptr[3 * 14 + 2];
 
             // Update y for diffeq call
-            this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + temp_double_3 * this->step;
+            this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + temp_double_arr[y_i * 2 + 1] * this->step;
         }
         // Update time and call the diffeq.
         this->t_now_ptr[0] = this->t_old + (this->step * DOP853_CEXTRA_ptr[2]);
@@ -938,10 +942,10 @@ void RKSolver::p_update_Q(double* Q_ptr)
             }
             // Now add the extra 3 rows from extended
             // Row 1
-            temp_double   += K_extended_ptr[y_i * 3] * DOP853_D_ptr[4 * 13];
-            temp_double_2 += K_extended_ptr[y_i * 3] * DOP853_D_ptr[4 * 13 + 1];
-            temp_double_3 += K_extended_ptr[y_i * 3] * DOP853_D_ptr[4 * 13 + 2];
-            temp_double_4 += K_extended_ptr[y_i * 3] * DOP853_D_ptr[4 * 13 + 3];
+            temp_double   += K_extended_ptr[y_i * 3]     * DOP853_D_ptr[4 * 13];
+            temp_double_2 += K_extended_ptr[y_i * 3]     * DOP853_D_ptr[4 * 13 + 1];
+            temp_double_3 += K_extended_ptr[y_i * 3]     * DOP853_D_ptr[4 * 13 + 2];
+            temp_double_4 += K_extended_ptr[y_i * 3]     * DOP853_D_ptr[4 * 13 + 3];
             // Row 2
             temp_double   += K_extended_ptr[y_i * 3 + 1] * DOP853_D_ptr[4 * 14];
             temp_double_2 += K_extended_ptr[y_i * 3 + 1] * DOP853_D_ptr[4 * 14 + 1];
@@ -981,7 +985,7 @@ void RKSolver::p_update_Q(double* Q_ptr)
         std::memcpy(this->dy_now_ptr, dy_now_storage_ptr, sizeof(double) * this->num_dy);
         std::memcpy(this->y_now_ptr, y_now_storage, sizeof(double) * this->num_y);
         this->t_now_ptr[0] = time_storage;
-    }
+        }
         break;
 
     [[unlikely]] default:
@@ -1013,7 +1017,13 @@ void RKSolver::p_update_Q(double* Q_ptr)
 CySolverDense* RKSolver::p_dense_output_heap()
 {
     // Build dense output object instance
-    RKDenseOutput* dense_output = new RKDenseOutput(this->method_int, this->t_old, this->t_now_ptr[0], this->y_old_ptr, this->num_y, this->len_Pcols);
+    CySolverDense* dense_output = new CySolverDense(
+        this->integration_method,
+        this->t_old,
+        this->t_now_ptr[0],
+        this->y_old_ptr,
+        this->num_y,
+        this->len_Pcols);
 
     // Update Q
     this->p_update_Q(dense_output->Q_ptr);
@@ -1021,15 +1031,13 @@ CySolverDense* RKSolver::p_dense_output_heap()
     return dense_output;
 }
 
-CySolverDense RKSolver::p_dense_output_stack()
+void RKSolver::p_dense_output_stack(CySolverDense& dense_output_ptr)
 {
-    // Build dense output object instance
-    RKDenseOutput dense_output = RKDenseOutput(this->method_int, this->t_old, this->t_now_ptr[0], this->y_old_ptr, this->num_y, this->len_Pcols);
-
+    // Update integration method specific items
+    dense_output_ptr.Q_order = this->len_Pcols;
+    
     // Update Q
-    this->p_update_Q(dense_output.Q_ptr);
-
-    return dense_output;
+    this->p_update_Q(dense_output_ptr.Q_ptr);
 }
 
 
@@ -1055,7 +1063,7 @@ void RK23::reset()
     this->len_Pcols = RK23_len_Pcols;
     this->error_estimator_order = RK23_error_estimator_order;
     this->error_exponent = RK23_error_exponent;
-    this->method_int = RK23_METHOD_INT;
+    this->integration_method = RK23_METHOD_INT;
 
     RKSolver::reset();
 }
@@ -1083,7 +1091,7 @@ void RK45::reset()
     this->len_Pcols = RK45_len_Pcols;
     this->error_estimator_order = RK45_error_estimator_order;
     this->error_exponent = RK45_error_exponent;
-    this->method_int = RK45_METHOD_INT;
+    this->integration_method = RK45_METHOD_INT;
 
     RKSolver::reset();
 }
@@ -1111,7 +1119,7 @@ void DOP853::reset()
     this->len_Pcols = DOP853_INTERPOLATOR_POWER; // Used by DOP853 dense output.
     this->error_estimator_order = DOP853_error_estimator_order;
     this->error_exponent = DOP853_error_exponent;
-    this->method_int = DOP853_METHOD_INT;
+    this->integration_method = DOP853_METHOD_INT;
 
     RKSolver::reset();
 }
@@ -1235,109 +1243,3 @@ void DOP853::p_estimate_error()
 // ########################################################################################################################
 // Dense Output Implementations
 // ########################################################################################################################
-RKDenseOutput::RKDenseOutput(int integrator_int, double t_old, double t_now, double* y_in_ptr, unsigned int num_y, unsigned int Q_order) :
-        CySolverDense(integrator_int, t_old, t_now, y_in_ptr, num_y),
-        Q_order(Q_order)
-{
-    this->step = t_now - t_old;
-}
-
-void RKDenseOutput::call(double t_interp, double* y_interped)
-{
-    double step_factor = (t_interp - this->t_old) / this->step;
-
-    // SciPy Step:: p = np.tile(x, self.order + 1) (scipy order is Q_order - 1)
-    double cumlative_prod = step_factor;
-
-    // y = y_old + Q dot p.
-    // Q has shape of (n_stages + 1, num_y)
-    for (unsigned int y_i = 0; y_i < this->num_y; y_i++)
-    {
-        unsigned int Q_stride = this->Q_order * y_i;
-
-        // Initialize dot product
-        double temp_double;
-
-        switch (this->integrator_int)
-        {
-        case 0:
-            // RK23
-            // P=0
-            temp_double = this->Q_ptr[Q_stride] * cumlative_prod;
-            // P=1
-            cumlative_prod *= step_factor;
-            temp_double = this->Q_ptr[Q_stride + 1] * cumlative_prod;
-            // P=2
-            cumlative_prod *= step_factor;
-            temp_double = this->Q_ptr[Q_stride + 2] * cumlative_prod;
-
-            // Finally multiply by step
-            temp_double *= this->step;
-
-            break;
-
-        case 1:
-            // RK45
-            // P=0
-            temp_double = this->Q_ptr[Q_stride] * cumlative_prod;
-            // P=1
-            cumlative_prod *= step_factor;
-            temp_double = this->Q_ptr[Q_stride + 1] * cumlative_prod;
-            // P=2
-            cumlative_prod *= step_factor;
-            temp_double = this->Q_ptr[Q_stride + 2] * cumlative_prod;
-            // P=3
-            cumlative_prod *= step_factor;
-            temp_double = this->Q_ptr[Q_stride + 3] * cumlative_prod;
-            
-            // Finally multiply by step
-            temp_double *= this->step;
-
-            break;
-
-        case 2:
-            // DOP853
-            // This method is different from RK23 and RK45
-            // Q is the reverse of SciPy's "F". The size of Q is (Interpolator power (Q_order), num_y)
-            // DOP853 interp power is 7
-            // This dense output does an alternating multiplier where even values of P_i are multipled by the step factor.
-            // Odd values are multipled by 1 - step factor.
-
-            // P=0
-            temp_double = this->Q_ptr[Q_stride];
-            temp_double *= step_factor;
-            // P=1
-            temp_double += this->Q_ptr[Q_stride + 1];
-            temp_double *= (1.0 - step_factor);
-            // P=2
-            temp_double += this->Q_ptr[Q_stride + 2];
-            temp_double *= step_factor;
-            // P=3
-            temp_double += this->Q_ptr[Q_stride + 3];
-            temp_double *= (1.0 - step_factor);
-            // P=4
-            temp_double += this->Q_ptr[Q_stride + 4];
-            temp_double *= step_factor;
-            // P=5
-            temp_double += this->Q_ptr[Q_stride + 5];
-            temp_double *= (1.0 - step_factor);
-            // P=6
-            temp_double += this->Q_ptr[Q_stride + 6];
-            temp_double *= step_factor;
-            break;
-
-        [[unlikely]] default:
-            // Initialize dot product
-            temp_double = this->Q_ptr[Q_stride + 0] * cumlative_prod;
-            for (unsigned int i = 1; i < (this->Q_order); i++)
-            {
-                cumlative_prod *= step_factor;
-                temp_double += this->Q_ptr[Q_stride + i] * cumlative_prod;
-            }
-            break;
-        }
-
-        y_interped[y_i] = this->y_stored_ptr[y_i] + temp_double;
-    }
-}
-

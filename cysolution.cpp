@@ -13,7 +13,7 @@ CySolverResult::CySolverResult(
         const int num_y,
         const int num_extra,
         const size_t expected_size,
-        const size_t last_t,
+        const double last_t,
         const bool direction_flag,
         const bool capture_dense_output,
         const bool t_eval_provided) :
@@ -242,7 +242,7 @@ void CySolverResult::save_data(const double new_t, double* const new_solution_y_
     this->data_buffer_time_ptr[this->current_data_buffer_size] = new_t;
 
     // Save y
-    unsigned int stride = this->current_data_buffer_size * this->num_dy;
+    unsigned int stride = this->current_data_buffer_size * this->num_dy;  // We have to stride across num_dy even though we are only saving num_y values.
     std::memcpy(&this->data_buffer_y_ptr[stride], new_solution_y_ptr, sizeof(double) * this->num_y);
 
     // Save extra
@@ -346,7 +346,7 @@ void CySolverResult::call(const double t, double* y_interp)
         // This may only hold if the integration is in the forward direction.
         // TODO: See if this holds for backwards integration and update if needed.
         // Get a guess for binary search
-        size_t closest_index = (size_t)std::floor(interp_time_len_touse * t / this->last_t);
+        size_t closest_index = (size_t)std::floor((double)interp_time_len_touse * t / this->last_t);
 
         // For some reason I only get right results when adding "2+" instead of "1+" to this index...
         closest_index = 2 + binary_search_with_guess(t, interp_time_touse_ptr, interp_time_len_touse, closest_index);
@@ -356,5 +356,18 @@ void CySolverResult::call(const double t, double* y_interp)
 
         // Call interpolant to update y
         this->dense_vector[closest_index]->call(t, y_interp);
+    }
+}
+
+void CySolverResult::call_vectorize(const double* t_array_ptr, size_t len_t, double* y_interp)
+{
+    double* y_sub_ptr;
+
+    for (size_t i = 0; i < len_t; i++)
+    {
+        // Assume y is passed as a y0_0, y1_0, y2_0, ... y0_1, y1_1, y2_1, ...
+        y_sub_ptr = &y_interp[this->num_y * i];
+
+        this->call(t_array_ptr[i], y_sub_ptr);
     }
 }

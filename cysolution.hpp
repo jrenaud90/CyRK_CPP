@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstring>
-#include <cstdio>
 #include <vector>
 #include <memory>
 #include <algorithm>
@@ -31,10 +30,11 @@ protected:
     CySolverDense** data_buffer_dense_ptr  = &data_buffer_dense_output[0];
     
     // Metadata
-    size_t last_t          = 0;
+    double last_t          = 0;
     double num_dy_dbl      = 0.0;
     unsigned int num_extra = 0;
 
+public:
     // Storage for arrays
     bool capture_extra = false;
     
@@ -42,7 +42,6 @@ protected:
     bool capture_dense_output = false;
     bool t_eval_provided      = false;
 
-public:
     // Status information
     bool success      = false;
     bool reset_called = false;
@@ -100,7 +99,7 @@ public:
         const int num_y,
         const int num_extra,
         const size_t expected_size,
-        const size_t last_t,
+        const double last_t,
         const bool direction_flag,
         const bool capture_dense_output,
         const bool t_eval_provided);
@@ -110,4 +109,5 @@ public:
     void reset();
     void update_message(const char* const new_message_ptr);
     void call(const double t, double* y_interp);
+    void call_vectorize(const double* t_array_ptr, size_t len_t, double* y_interp);
 };

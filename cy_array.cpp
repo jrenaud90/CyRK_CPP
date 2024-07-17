@@ -1,7 +1,7 @@
 #include "cy_array.hpp"
 
 size_t binary_search_with_guess(double key, const double* array, size_t length, size_t guess) {
-    size_t LIKELY_IN_CACHE_SIZE = 8;
+    const size_t LIKELY_IN_CACHE_SIZE = 8;
 
     size_t imin = 0;
     size_t imax = length;

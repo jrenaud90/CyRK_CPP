@@ -3,36 +3,6 @@
 
 #include "common.hpp"
 #include "cysolver.hpp"
-#include "dense.hpp"
-
-// ########################################################################################################################
-// Dense Output Implementations
-// ########################################################################################################################
-class RKDenseOutput : public CySolverDense
-{
-protected:
-    double step = 0.0;
-
-    // Q is defined by Q = K.T.dot(self.P)  K has shape of (n_stages + 1, num_y) so K.T has shape of (num_y, n_stages + 1)
-    // P has shape of (4, 3) for RK23; (7, 4) for RK45.. So (n_stages + 1, Q_order)
-    // So Q has shape of (num_y, n_stages + 1)
-    // Let's change it to (n_stages + 1, num_y)
-    // The max size of Q is (7-3) * 16 = 64. Lets assume this is the max size and stack allocate Q.
-    double Q[64] = { };
-    unsigned int Q_order = 0;
-
-public:
-    double* Q_ptr = &Q[0];
-
-protected:
-
-public:
-    virtual ~RKDenseOutput() {};
-    RKDenseOutput() : CySolverDense() {};
-    RKDenseOutput(int integrator_int, double t_old, double t_now, double* y_in_ptr, unsigned int num_y, unsigned int Q_order);
-    virtual void call(double t_interp, double* y_interped) override;
-};
-
 
 // ########################################################################################################################
 // RK Integrators
@@ -735,7 +705,7 @@ protected:
     virtual void p_estimate_error() override;
     virtual void p_step_implementation() override;
     virtual CySolverDense* p_dense_output_heap() override;
-    virtual CySolverDense p_dense_output_stack() override;
+    virtual void p_dense_output_stack(CySolverDense& dense_output_ptr) override;
     virtual void p_update_Q(double* Q_ptr);
 
 public:

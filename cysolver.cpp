@@ -228,6 +228,8 @@ void CySolverBase::reset()
     this->reset_called = true;
 }
 
+#include <cstdio>
+
 void CySolverBase::take_step()
 {    
     if (!this->reset_called) [[unlikely]]
@@ -236,7 +238,7 @@ void CySolverBase::take_step()
         this->reset();
     }
 
-    double t_now = this->t_now_ptr[0];
+    bool skip_t_eval = false;
 
     if (!this->status)
     {
@@ -267,94 +269,99 @@ void CySolverBase::take_step()
             this->p_step_implementation();
             this->len_t++;
 
-            // Take care of dense output
-            if (this->use_dense_output || this->use_t_eval)
+            // Take care of dense output and t_eval
+            if (this->use_dense_output)
             {
-                CySolverDense dense_output;
-                CySolverDense* dense_output_ptr = nullptr;
+                // We need to save many dense interpolators to storage. So let's heap allocate them.
+                CySolverDense* dense_output_heap_ptr = this->p_dense_output_heap();
+                // Save to storage array.
+                this->storage_ptr->save_dense(this->t_now_ptr[0], dense_output_heap_ptr);
+            }
 
-                if (this->use_dense_output)
+            if (this->use_t_eval && !skip_t_eval)
+            {
+                // Don't save data at the end
+                save_data = false;
+
+                // We are not saving interpolators to storage but we still need one to work on t_eval. 
+                // We will only ever need 1 interpolator per step. So let's just stack allocate that one.
+                CySolverDense dense_output(
+                    this->integration_method,
+                    this->t_old,
+                    this->t_now_ptr[0],
+                    this->y_old_ptr,
+                    this->num_y,
+                    0 // Fake Q order just for consistent constructor call
+                    );
+                // Update the dense output class with integrator-specific data
+                this->p_dense_output_stack(dense_output);
+
+                // Need to step through t_eval and call dense to determine correct data at each t_eval step.
+                // Find the first index in t_eval that is close to current time.
+                size_t t_eval_index_new = 1 + binary_search_with_guess(this->t_now_ptr[0], this->t_eval_ptr, this->len_t_eval, this->t_eval_index_old);
+                if (t_eval_index_new >= this->len_t_eval)
                 {
-                    // We need to save many dense interpolators to storage. So let's heap allocate them.
-                    dense_output_ptr = this->p_dense_output_heap();
-                    // Save to stroage array.
-                    this->storage_ptr->save_dense(this->t_now_ptr[0], dense_output_ptr);
-                }
-                else
-                {
-                    // We are not saving interpolators to storage but we still need one to work on t_eval. 
-                    // We will only ever need 1 interpolator per step. So let's just stack allocate that one.
-                    dense_output = this->p_dense_output_stack();
-                    // Use pointer to the stack allocated interpolator so that it matches the signature of the heap
-                    dense_output_ptr = &dense_output;
-                }
+                    t_eval_index_new = this->len_t_eval;
+                    // We are done with t_eval. Skip it from now on. 
+                    skip_t_eval = true;
+                }                
                 
-                if (this->use_t_eval)
+                // Check if there are any t_eval steps between this new index and the last index.
+                int t_eval_index_delta = (int)t_eval_index_new - (int)this->t_eval_index_old;
+                // If t_eval_index_delta == 0 then there are no new interpolations required between the last integration step and now.
+                // ^ In this case do not save any data, we are done with this step.
+
+                if (t_eval_index_delta > 0)
                 {
-                    // Don't save data at the end
-                    save_data = false;
+                    // There are steps we need to interpolate over.
+                    // Start with the old time and add t_eval step sizes until we are done.
+                    // Create a y array and dy_array to use during interpolation
+                    double y_interp[Y_LIMIT] = { };
+                    double* y_interp_ptr     = &y_interp[0];
 
-                    // Need to step through t_eval and call dense to determine correct data at each t_eval step.
-                    // Find the first index in t_eval that is close to current time.
-                    size_t t_eval_index_new = 1 + binary_search_with_guess(this->t_now_ptr[0], this->t_eval_ptr, this->len_t_eval, this->t_eval_index_old);
-                    // Check if there are any t_eval steps between this new index and the last index.
-                    int t_eval_index_delta = (int)t_eval_index_new - (int)this->t_eval_index_old;
-                    // If t_eval_index_delta == 0 then there are no new interpolations required between the last integration step and now.
-                    // ^ In this case do not save any data, we are done with this step.
+                    // If capture extra is set to true then we need to hold onto a copy of the current state
+                    // The current state pointers must be overwritten if extra output is to be captured.
+                    // However we need a copy of the current state pointers at the end of this step anyways. So just
+                    // store them now and skip storing them later.
 
-                    if (t_eval_index_delta > 0)
+                    if (this->capture_extra)
                     {
-                        // There are steps we need to interpolate over.
-                        // Start with the old time and add t_eval step sizes until we are done.
-                        // Create a y array and dy_array to use during interpolation
-                        double y_interp[Y_LIMIT] = { };
-                        double* y_interp_ptr     = &y_interp[0];
+                        // We need to copy the current state of y, dy, and time
+                        this->t_old = this->t_now_ptr[0];
+                        std::memcpy(this->y_old_ptr, this->y_now_ptr, sizeof(double) * this->num_y);
+                        std::memcpy(this->dy_old_ptr, this->dy_now_ptr, sizeof(double) * this->num_dy);
 
-                        // If capture extra is set to true then we need to hold onto a copy of the current state
-                        // The current state pointers must be overwritten if extra output is to be captured.
-                        // However we need a copy of the current state pointers at the end of this step anyways. So just
-                        // store them now and skip storing them later.
+                        // Don't update these again at the end
+                        prepare_for_next_step = false;
+                    }
+
+                    for (size_t i = 0; i < t_eval_index_delta; i++)
+                    {
+                        double t_interp = this->t_eval_ptr[this->t_eval_index_old + i];
+
+                        // Call the interpolator using this new time value.
+                        dense_output.call(t_interp, y_interp_ptr);
 
                         if (this->capture_extra)
                         {
-                            // We need to copy the current state of y, dy, and time
-                            this->t_old = this->t_now_ptr[0];
-                            std::memcpy(this->y_old_ptr, this->y_now_ptr, sizeof(double) * this->num_y);
-                            std::memcpy(this->dy_old_ptr, this->dy_now_ptr, sizeof(double) * this->num_dy);
+                            // If the user want to capture extra output then we also have to call the differential equation to get that extra output.
+                            // To do this we need to hack the current integrators t_now, y_now, and dy_now.
+                            // TODO: This could be more efficient if we just changed pointers but since the PySolver only stores y_now_ptr, dy_now_ptr, etc at initialization, it won't be able to see changes to new pointer. 
+                            // So for now we have to do a lot of copying of data.
 
-                            // Don't update these again at the end
-                            prepare_for_next_step = false;
+                            // Copy the interpreted y onto the current y_now_ptr. Also update t_now
+                            this->t_now_ptr[0] = t_interp;
+                            std::memcpy(this->y_now_ptr, y_interp_ptr, sizeof(double) * this->num_y);
+
+                            // Call diffeq to update dy_now_ptr with the extra output.
+                            this->diffeq(this);
                         }
-
-                        for (size_t i = 0; i < t_eval_index_delta; i++)
-                        {
-                            double t_interp = this->t_eval_ptr[this->t_eval_index_old + i];
-
-                            // Call the interpolator using this new time value.
-                            dense_output_ptr->call(t_interp, y_interp_ptr);
-
-                            if (this->capture_extra)
-                            {
-                                // If the user want to capture extra output then we also have to call the differential equation to get that extra output.
-                                // To do this we need to hack the current integrators t_now, y_now, and dy_now.
-                                // TODO: This could be more efficient if we just changed pointers but since the PySolver only stores y_now_ptr, dy_now_ptr, etc at initialization, it won't be able to see changes to new pointer. 
-                                // So for now we have to do a lot of copying of data.
-
-                                // Copy the interpreted y onto the current y_now_ptr. Also update t_now
-                                this->t_now_ptr[0] = t_interp;
-                                std::memcpy(this->y_now_ptr, y_interp_ptr, sizeof(double) * this->num_y);
-
-                                // Call diffeq to update dy_now_ptr with the extra output.
-                                this->diffeq(this);
-
-                            }
-                            // Save interpolated data to storage. If capture extra is true then dy_now holds those extra values. If it is false then it won't hurt to pass dy_now to storage.
-                            this->storage_ptr->save_data(t_interp, y_interp_ptr, this->dy_now_ptr);
-                        }
+                        // Save interpolated data to storage. If capture extra is true then dy_now holds those extra values. If it is false then it won't hurt to pass dy_now to storage.
+                        this->storage_ptr->save_data(t_interp, y_interp_ptr, this->dy_now_ptr);
                     }
-                    // Update the old index for the next step
-                    this->t_eval_index_old = t_eval_index_new;
                 }
+                // Update the old index for the next step
+                this->t_eval_index_old = t_eval_index_new;
             }
             if (save_data)
             {
@@ -442,12 +449,19 @@ void CySolverBase::solve()
 /* Dense Output Methods */
 CySolverDense* CySolverBase::p_dense_output_heap()
 {
-    return new CySolverDense(this->method_int, this->t_old, this->t_now_ptr[0], this->y_old_ptr, this->num_y);
+    return new CySolverDense(
+        this->integration_method,
+        this->t_old,
+        this->t_now_ptr[0],
+        this->y_old_ptr,
+        this->num_y,
+        0 // Fake Q order just for consistent constructor call
+        );
 }
 
-CySolverDense CySolverBase::p_dense_output_stack()
+void CySolverBase::p_dense_output_stack(CySolverDense& dense_output_ptr)
 {
-    return CySolverDense(this->method_int, this->t_old, this->t_now_ptr[0], this->y_old_ptr, this->num_y);
+    // Don't do anything. Subclasses will override this method.
 }
 
 

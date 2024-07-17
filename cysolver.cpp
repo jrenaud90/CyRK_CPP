@@ -442,12 +442,12 @@ void CySolverBase::solve()
 /* Dense Output Methods */
 CySolverDense* CySolverBase::p_dense_output_heap()
 {
-    return new CySolverDense(this->t_old, this->t_now_ptr[0], this->y_old_ptr, this->num_y);
+    return new CySolverDense(this->method_int, this->t_old, this->t_now_ptr[0], this->y_old_ptr, this->num_y);
 }
 
 CySolverDense CySolverBase::p_dense_output_stack()
 {
-    return CySolverDense(this->t_old, this->t_now_ptr[0], this->y_old_ptr, this->num_y);
+    return CySolverDense(this->method_int, this->t_old, this->t_now_ptr[0], this->y_old_ptr, this->num_y);
 }
 
 

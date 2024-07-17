@@ -1,7 +1,8 @@
 
 #include "dense.hpp"
 
-CySolverDense::CySolverDense(double t_old, double t_now, double* y_in_ptr, unsigned int num_y) :
+CySolverDense::CySolverDense(int integrator_int, double t_old, double t_now, double* y_in_ptr, unsigned int num_y) :
+        integrator_int(integrator_int),
         t_old(t_old),
         t_now(t_now),
         num_y(num_y)

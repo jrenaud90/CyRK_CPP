@@ -74,7 +74,8 @@ void test_regular(
         double t_end = 500.0,
         bool save_dense = false,
         size_t len_t_eval = 0, // 7070 == 2x; 1767 == 0.5x for tspan of (0, 500))
-        unsigned int num_extra = 0
+        unsigned int num_extra = 0,
+        unsigned int method = 1
         )
 {
     DiffeqFuncType diffeq_func = test_diffeq;
@@ -86,8 +87,6 @@ void test_regular(
     
     double time_span[2] = { 0.0, t_end };
     double* time_span_ptr = &time_span[0];
-
-    unsigned int method = 1;
     int max_i = 1000;
 
     double y0[2] = { 20.0, 20.0 };
@@ -235,11 +234,14 @@ int main(){
     */
 
     test_regular(
-        500.0,
-        false,
-        0, // len t_eval 7070 == 2x; 1767 == 0.5x for tspan of (0, 500))
-        0
+        500.0, // t_end
+        true, // Dense
+        0,     // len t_eval 7070 == 2x; 1767 == 0.5x for tspan of (0, 500))
+        0,     // num extra
+        2      // Method
     );
+
+    // 1333.07
 
 
     return 0;

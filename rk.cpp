@@ -706,36 +706,33 @@ void RKSolver::calc_first_step_size()
 
 /* Dense Output Methods */
 
-void RKSolver::p_update_Q(double* Q_ptr) const
+void RKSolver::p_update_Q(double* Q_ptr)
 {
     // Q's definition depends on the integrators implementation. 
     // For default RK, it is defined by Q = K.T.dot(self.P)  K has shape of (n_stages + 1, num_y) so K.T has shape of (num_y, n_stages + 1)
     // P has shape of (4, 3) for RK23; (7, 4) for RK45.. So (n_stages + 1, Q_order)
     // So Q has shape of (num_y, num_Pcols)
 
-    for (unsigned int y_i = 0; y_i < this->num_y; y_i++)
+    switch (this->method_int)
     {
-        const unsigned int stride_Q = y_i * this->len_Pcols;
-        const unsigned int stride_K = y_i * this->n_stages_p1;
 
-        switch (this->method_int)
+    case(0):
+        // RK23
+        for (unsigned int y_i = 0; y_i < this->num_y; y_i++)
         {
-            double temp_double;
-            unsigned int stride_P;
-
-        case(0):
-            // RK23
+            const unsigned int stride_Q = y_i * this->len_Pcols;
+            const unsigned int stride_K = y_i * this->n_stages_p1;
             // len_Pcols == 3; n_stages + 1 == 4
 
             // P = 0
-            temp_double = this->K_ptr[stride_K] * this->P_ptr[0];
+            double temp_double = this->K_ptr[stride_K] * this->P_ptr[0];
             temp_double += this->K_ptr[stride_K + 1] * this->P_ptr[1];
             temp_double += this->K_ptr[stride_K + 2] * this->P_ptr[2];
             temp_double += this->K_ptr[stride_K + 3] * this->P_ptr[3];
             Q_ptr[stride_Q] = temp_double;
 
             // P = 1
-            stride_P = this->n_stages_p1;
+            unsigned int stride_P = this->n_stages_p1;
             temp_double = this->K_ptr[stride_K] * this->P_ptr[stride_P];
             temp_double += this->K_ptr[stride_K + 1] * this->P_ptr[stride_P + 1];
             temp_double += this->K_ptr[stride_K + 2] * this->P_ptr[stride_P + 2];
@@ -749,13 +746,19 @@ void RKSolver::p_update_Q(double* Q_ptr) const
             temp_double += this->K_ptr[stride_K + 2] * this->P_ptr[stride_P + 2];
             temp_double += this->K_ptr[stride_K + 3] * this->P_ptr[stride_P + 3];
             Q_ptr[stride_Q + 2] = temp_double;
+        }
+        break;
 
-            break;
-        case(1):
-            // RK45
+    case(1):
+        // RK45
+        for (unsigned int y_i = 0; y_i < this->num_y; y_i++)
+        {
+            const unsigned int stride_Q = y_i * this->len_Pcols;
+            const unsigned int stride_K = y_i * this->n_stages_p1;
+
             // len_Pcols == 4; n_stages + 1 == 7
             // P = 0
-            temp_double = this->K_ptr[stride_K] * this->P_ptr[0];
+            double temp_double = this->K_ptr[stride_K] * this->P_ptr[0];
             temp_double += this->K_ptr[stride_K + 1] * this->P_ptr[1];
             temp_double += this->K_ptr[stride_K + 2] * this->P_ptr[2];
             temp_double += this->K_ptr[stride_K + 3] * this->P_ptr[3];
@@ -765,7 +768,7 @@ void RKSolver::p_update_Q(double* Q_ptr) const
             Q_ptr[stride_Q] = temp_double;
 
             // P = 1
-            stride_P = this->n_stages_p1;
+            unsigned int stride_P = this->n_stages_p1;
             temp_double = this->K_ptr[stride_K] * this->P_ptr[stride_P];
             temp_double += this->K_ptr[stride_K + 1] * this->P_ptr[stride_P + 1];
             temp_double += this->K_ptr[stride_K + 2] * this->P_ptr[stride_P + 2];
@@ -796,17 +799,208 @@ void RKSolver::p_update_Q(double* Q_ptr) const
             temp_double += this->K_ptr[stride_K + 5] * this->P_ptr[stride_P + 5];
             temp_double += this->K_ptr[stride_K + 6] * this->P_ptr[stride_P + 6];
             Q_ptr[stride_Q + 3] = temp_double;
+        }
 
-            break;
-        case(2):
-            // DOP853
-            // TODO
-            break;
-        [[unlikely]] default:
+        break;
+
+    case(2):
+    {
+        // DOP853
+        // This method uses the current values stored in K and expands upon them by 3 more values determined by calls to the diffeq.
+
+        // We need to save a copy of the current state because we will overwrite the values shortly
+        double dy_now_storage[DY_LIMIT] = { };
+        double* dy_now_storage_ptr = &dy_now_storage[0];
+        std::memcpy(dy_now_storage_ptr, this->dy_now_ptr, sizeof(double) * this->num_dy);
+
+        double y_now_storage[Y_LIMIT] = { };
+        double* y_now_storage_ptr = &y_now_storage[0];
+        std::memcpy(y_now_storage, this->y_now_ptr, sizeof(double) * this->num_y);
+
+        double time_storage = this->t_now_ptr[0];
+
+        // We also need to store dy_dt so that they can be used in dot products
+        double K_extended[Y_LIMIT * 3] = { };
+        double* K_extended_ptr = &K_extended[0];
+
+
+        // S (row) == 13
+        // Solve for dy used to call diffeq
+        double temp_double;
+        unsigned int stride_K;
+        unsigned int stride_A;
+
+        for (unsigned int y_i = 0; y_i < this->num_y; y_i++)
+        {
+            // Dot Product (K.T dot a) * h
+            stride_K = this->n_stages_p1 * y_i;
+            // Go up to a max of Row 13
+            temp_double = 0.0;
+            for (unsigned int n_i = 0; n_i < this->n_stages_p1; n_i++)
+            {
+                temp_double += this->K_ptr[stride_K + n_i] * DOP853_AEXTRA_ptr[n_i];
+            }
+
+            // Update y for diffeq call
+            this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + temp_double * this->step;
+        }
+        // Update time and call the diffeq.
+        this->t_now_ptr[0] = this->t_old + (this->step * DOP853_CEXTRA_ptr[0]);
+        this->diffeq(this);
+
+        // S (row) == 14
+        for (unsigned int y_i = 0; y_i < this->num_y; y_i++)
+        {
+            // Store dy from the last call.
+            K_extended_ptr[y_i * 3] = this->dy_now_ptr[y_i];
+
+            // Dot Product (K.T dot a) * h
+            stride_K = this->n_stages_p1 * y_i;
+            stride_A = DOP853_AEXTRA_cols;
+            // Go up to a max of Row 13
+            temp_double = 0.0;
+            for (unsigned int n_i = 0; n_i < this->n_stages_p1; n_i++)
+            {
+                temp_double += this->K_ptr[stride_K + n_i] * DOP853_AEXTRA_ptr[stride_A + n_i];
+            }
+            // Then add Row 14
+            temp_double += K_extended_ptr[y_i * 3] * DOP853_AEXTRA_ptr[stride_A + 13];
+
+            // Update y for diffeq call
+            this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + temp_double * this->step;
+        }
+        // Update time and call the diffeq.
+        this->t_now_ptr[0] = this->t_old + (this->step * DOP853_CEXTRA_ptr[1]);
+        this->diffeq(this);
+
+        // S (row) == 15
+        for (unsigned int y_i = 0; y_i < this->num_y; y_i++)
+        {
+            // Store dy from the last call.
+            K_extended_ptr[y_i * 3 + 1] = this->dy_now_ptr[y_i];
+
+            // Dot Product (K.T dot a) * h
+            stride_K = this->n_stages_p1 * y_i;
+            stride_A = DOP853_AEXTRA_cols * 2;
+            // Go up to a max of Row 13
+            temp_double = 0.0;
+            for (unsigned int n_i = 0; n_i < this->n_stages_p1; n_i++)
+            {
+                temp_double += this->K_ptr[stride_K + n_i] * DOP853_AEXTRA_ptr[stride_A + n_i];
+            }
+            // Then add Row 14
+            temp_double += K_extended_ptr[y_i * 3] * DOP853_AEXTRA_ptr[stride_A + 13];
+            // Then add Row 15
+            temp_double += K_extended_ptr[y_i * 3 + 1] * DOP853_AEXTRA_ptr[stride_A + 14];
+
+            // Update y for diffeq call
+            this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + temp_double * this->step;
+        }
+        // Update time and call the diffeq.
+        this->t_now_ptr[0] = this->t_old + (this->step * DOP853_CEXTRA_ptr[2]);
+        this->diffeq(this);
+
+
+        // Done with diffeq calls. Now build up Q matrix.
+        for (unsigned int y_i = 0; y_i < this->num_y; y_i++)
+        {
+            // Store dy from the last call.
+            K_extended_ptr[y_i * 3 + 2] = this->dy_now_ptr[y_i];
+
+            // SciPy builds up a "F" matrix. Then in the dense interpolator this is reversed.
+            // To keep consistency we will build F pre-reversed into Q. 
+            // F (and Q) have the shape of (Interpolator Power, y_len); Interpolator power is 7
+            const unsigned int stride_Q = y_i * this->len_Pcols;
+            // F in normal direction is:
+            // F[0] = delta_y
+            // F[1] = h * f_old - delta_y
+            // F[2] = 2 * delta_y - h * (self.f + f_old)
+            // F[3:] = h * np.dot(self.D, K)
+            // Reversed it would be
+            // F[0:4] = reversed(h * np.dot(self.D, K))
+            // F[4] = 2 * delta_y - h * (self.f + f_old)
+            // F[5] = h * f_old - delta_y
+            // F[6] = delta_y
+
+            // Work on dot product between D and K
+            stride_K = this->n_stages_p1 * y_i;
+            // D Row 4
+            temp_double          = 0.0;
+            double temp_double_2 = 0.0;
+            double temp_double_3 = 0.0;
+            double temp_double_4 = 0.0;
+            double K_ni = 0.0;
+
+            // First add up normal K
+            for (unsigned int n_i = 0; n_i < this->n_stages_p1; n_i++)
+            {
+                K_ni = this->K_ptr[stride_K + n_i];
+                // Row 1
+                temp_double   += K_ni * DOP853_D_ptr[4 * n_i];
+                // Row 2
+                temp_double_2 += K_ni * DOP853_D_ptr[4 * n_i + 1];
+                // Row 3
+                temp_double_3 += K_ni * DOP853_D_ptr[4 * n_i + 2];
+                // Row 4
+                temp_double_4 += K_ni * DOP853_D_ptr[4 * n_i + 3];
+            }
+            // Now add the extra 3 rows from extended
+            // Row 1
+            temp_double   += K_extended_ptr[y_i * 3] * DOP853_D_ptr[4 * 13];
+            temp_double_2 += K_extended_ptr[y_i * 3] * DOP853_D_ptr[4 * 13 + 1];
+            temp_double_3 += K_extended_ptr[y_i * 3] * DOP853_D_ptr[4 * 13 + 2];
+            temp_double_4 += K_extended_ptr[y_i * 3] * DOP853_D_ptr[4 * 13 + 3];
+            // Row 2
+            temp_double   += K_extended_ptr[y_i * 3 + 1] * DOP853_D_ptr[4 * 14];
+            temp_double_2 += K_extended_ptr[y_i * 3 + 1] * DOP853_D_ptr[4 * 14 + 1];
+            temp_double_3 += K_extended_ptr[y_i * 3 + 1] * DOP853_D_ptr[4 * 14 + 2];
+            temp_double_4 += K_extended_ptr[y_i * 3 + 1] * DOP853_D_ptr[4 * 14 + 3];
+            // Row 3
+            temp_double   += K_extended_ptr[y_i * 3 + 2] * DOP853_D_ptr[4 * 15];
+            temp_double_2 += K_extended_ptr[y_i * 3 + 2] * DOP853_D_ptr[4 * 15 + 1];
+            temp_double_3 += K_extended_ptr[y_i * 3 + 2] * DOP853_D_ptr[4 * 15 + 2];
+            temp_double_4 += K_extended_ptr[y_i * 3 + 2] * DOP853_D_ptr[4 * 15 + 3];
+
+
+            // Store these in reversed order
+            Q_ptr[stride_Q]     = this->step * temp_double_4;
+            Q_ptr[stride_Q + 1] = this->step * temp_double_3;
+            Q_ptr[stride_Q + 2] = this->step * temp_double_2;
+            Q_ptr[stride_Q + 3] = this->step * temp_double;
+
+            // Non dot product values
+            // F[4] = 2 * delta_y - h * (self.f + f_old)
+            // f_old = K[0]
+            // delta_y requires the current y and last y, but the current y was just overwritten to find
+            // K_extended. So we need to pull from the values we saved in temporary variables. Same thing with dy
+            const double delta_y = y_now_storage[y_i] - this->y_old_ptr[y_i];
+            const double sum_dy  = dy_now_storage_ptr[y_i] + this->K_ptr[stride_K];
+            Q_ptr[stride_Q + 4] = 2.0 * delta_y - this->step * sum_dy;
+
+            // F[5] = h * f_old - delta_y
+            Q_ptr[stride_Q + 5] = this->step * this->K_ptr[stride_K] - delta_y;
+
+            // F[6] = delta_y
+            Q_ptr[stride_Q + 6] = delta_y;
+
+        }
+
+        // Return values that were saved in temp variables back to state variables.
+        std::memcpy(this->dy_now_ptr, dy_now_storage_ptr, sizeof(double) * this->num_dy);
+        std::memcpy(this->y_now_ptr, y_now_storage, sizeof(double) * this->num_y);
+        this->t_now_ptr[0] = time_storage;
+    }
+        break;
+
+    [[unlikely]] default:
+        for (unsigned int y_i = 0; y_i < this->num_y; y_i++)
+        {
+            const unsigned int stride_K = this->n_stages_p1 * y_i;
+            const unsigned int stride_Q = y_i * this->len_Pcols;
+
             for (unsigned int P_i = 0; P_i < this->len_Pcols; P_i++)
             {
                 const unsigned int stride_P = P_i * this->n_stages_p1;
-
                 // Initialize dot product
                 double temp_double = 0.0;
 
@@ -819,15 +1013,15 @@ void RKSolver::p_update_Q(double* Q_ptr) const
                 // Set equal to Q
                 Q_ptr[stride_Q + P_i] = temp_double;
             }
-            break;
         }
+        break;
     }
 }
 
 CySolverDense* RKSolver::p_dense_output_heap()
 {
     // Build dense output object instance
-    RKDenseOutput* dense_output = new RKDenseOutput(this->t_old, this->t_now_ptr[0], this->y_old_ptr, this->num_y, this->len_Pcols);
+    RKDenseOutput* dense_output = new RKDenseOutput(this->method_int, this->t_old, this->t_now_ptr[0], this->y_old_ptr, this->num_y, this->len_Pcols);
 
     // Update Q
     this->p_update_Q(dense_output->Q_ptr);
@@ -838,7 +1032,7 @@ CySolverDense* RKSolver::p_dense_output_heap()
 CySolverDense RKSolver::p_dense_output_stack()
 {
     // Build dense output object instance
-    RKDenseOutput dense_output = RKDenseOutput(this->t_old, this->t_now_ptr[0], this->y_old_ptr, this->num_y, this->len_Pcols);
+    RKDenseOutput dense_output = RKDenseOutput(this->method_int, this->t_old, this->t_now_ptr[0], this->y_old_ptr, this->num_y, this->len_Pcols);
 
     // Update Q
     this->p_update_Q(dense_output.Q_ptr);
@@ -922,6 +1116,7 @@ void DOP853::reset()
     this->n_stages  = DOP853_n_stages;
     this->len_Acols = DOP853_A_cols;
     this->len_C     = DOP853_len_C;
+    this->len_Pcols = DOP853_INTERPOLATOR_POWER; // Used by DOP853 dense output.
     this->error_estimator_order = DOP853_error_estimator_order;
     this->error_exponent = DOP853_error_exponent;
     this->method_int = DOP853_METHOD_INT;
@@ -1048,8 +1243,8 @@ void DOP853::p_estimate_error()
 // ########################################################################################################################
 // Dense Output Implementations
 // ########################################################################################################################
-RKDenseOutput::RKDenseOutput(double t_old, double t_now, double* y_in_ptr, unsigned int num_y, unsigned int Q_order) :
-        CySolverDense(t_old, t_now, y_in_ptr, num_y),
+RKDenseOutput::RKDenseOutput(int integrator_int, double t_old, double t_now, double* y_in_ptr, unsigned int num_y, unsigned int Q_order) :
+        CySolverDense(integrator_int, t_old, t_now, y_in_ptr, num_y),
         Q_order(Q_order)
 {
     this->step = t_now - t_old;
@@ -1069,13 +1264,88 @@ void RKDenseOutput::call(double t_interp, double* y_interped)
         unsigned int Q_stride = this->Q_order * y_i;
 
         // Initialize dot product
-        double temp_double = this->Q_ptr[Q_stride + 0] * cumlative_prod;
+        double temp_double;
 
-        for (unsigned int i = 1; i < (this->Q_order); i++)
+        switch (this->integrator_int)
         {
+        case 0:
+            // RK23
+            // P=0
+            temp_double = this->Q_ptr[Q_stride] * cumlative_prod;
+            // P=1
             cumlative_prod *= step_factor;
-            temp_double += this->Q_ptr[Q_stride + i] * cumlative_prod;
+            temp_double = this->Q_ptr[Q_stride + 1] * cumlative_prod;
+            // P=2
+            cumlative_prod *= step_factor;
+            temp_double = this->Q_ptr[Q_stride + 2] * cumlative_prod;
+
+            // Finally multiply by step
+            temp_double *= this->step;
+
+            break;
+
+        case 1:
+            // RK45
+            // P=0
+            temp_double = this->Q_ptr[Q_stride] * cumlative_prod;
+            // P=1
+            cumlative_prod *= step_factor;
+            temp_double = this->Q_ptr[Q_stride + 1] * cumlative_prod;
+            // P=2
+            cumlative_prod *= step_factor;
+            temp_double = this->Q_ptr[Q_stride + 2] * cumlative_prod;
+            // P=3
+            cumlative_prod *= step_factor;
+            temp_double = this->Q_ptr[Q_stride + 3] * cumlative_prod;
+            
+            // Finally multiply by step
+            temp_double *= this->step;
+
+            break;
+
+        case 2:
+            // DOP853
+            // This method is different from RK23 and RK45
+            // Q is the reverse of SciPy's "F". The size of Q is (Interpolator power (Q_order), num_y)
+            // DOP853 interp power is 7
+            // This dense output does an alternating multiplier where even values of P_i are multipled by the step factor.
+            // Odd values are multipled by 1 - step factor.
+
+            // P=0
+            temp_double = this->Q_ptr[Q_stride];
+            temp_double *= step_factor;
+            // P=1
+            temp_double += this->Q_ptr[Q_stride + 1];
+            temp_double *= (1.0 - step_factor);
+            // P=2
+            temp_double += this->Q_ptr[Q_stride + 2];
+            temp_double *= step_factor;
+            // P=3
+            temp_double += this->Q_ptr[Q_stride + 3];
+            temp_double *= (1.0 - step_factor);
+            // P=4
+            temp_double += this->Q_ptr[Q_stride + 4];
+            temp_double *= step_factor;
+            // P=5
+            temp_double += this->Q_ptr[Q_stride + 5];
+            temp_double *= (1.0 - step_factor);
+            // P=6
+            temp_double += this->Q_ptr[Q_stride + 6];
+            temp_double *= step_factor;
+            break;
+
+        [[unlikely]] default:
+            // Initialize dot product
+            temp_double = this->Q_ptr[Q_stride + 0] * cumlative_prod;
+            for (unsigned int i = 1; i < (this->Q_order); i++)
+            {
+                cumlative_prod *= step_factor;
+                temp_double += this->Q_ptr[Q_stride + i] * cumlative_prod;
+            }
+            break;
         }
-        y_interped[y_i] = this->y_stored_ptr[y_i] + this->step * temp_double;
+
+        y_interped[y_i] = this->y_stored_ptr[y_i] + temp_double;
     }
 }
+

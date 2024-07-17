@@ -238,7 +238,7 @@ int main(){
         false, // Dense
         0,     // len t_eval 7070 == 2x; 1767 == 0.5x for tspan of (0, 500))
         0,     // num extra
-        1      // Method
+        2      // Method
     );
 
     // 1333.07

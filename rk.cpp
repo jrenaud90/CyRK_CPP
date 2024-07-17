@@ -832,7 +832,6 @@ void RKSolver::p_update_Q(double* Q_ptr)
         double temp_double_4;
         double K_ni;
         unsigned int stride_K;
-        unsigned int stride_A;
 
         for (unsigned int y_i = 0; y_i < this->num_y; y_i++)
         {

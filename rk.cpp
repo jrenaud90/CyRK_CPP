@@ -827,6 +827,10 @@ void RKSolver::p_update_Q(double* Q_ptr)
         // S (row) == 13
         // Solve for dy used to call diffeq
         double temp_double;
+        double temp_double_2;
+        double temp_double_3;
+        double temp_double_4;
+        double K_ni;
         unsigned int stride_K;
         unsigned int stride_A;
 
@@ -835,13 +839,18 @@ void RKSolver::p_update_Q(double* Q_ptr)
             // Dot Product (K.T dot a) * h
             stride_K = this->n_stages_p1 * y_i;
             // Go up to a max of Row 13
-            temp_double = 0.0;
+            temp_double   = 0.0;
+            temp_double_2 = 0.0;
+            temp_double_3 = 0.0;
             for (unsigned int n_i = 0; n_i < this->n_stages_p1; n_i++)
             {
-                temp_double += this->K_ptr[stride_K + n_i] * DOP853_AEXTRA_ptr[n_i];
+                K_ni = K_ptr[stride_K + n_i];
+                temp_double   += K_ni * DOP853_AEXTRA_ptr[3 * n_i];
+                temp_double_2 += K_ni * DOP853_AEXTRA_ptr[3 * n_i + 1];
+                temp_double_3 += K_ni * DOP853_AEXTRA_ptr[3 * n_i + 2];
             }
 
-            // Update y for diffeq call
+            // Update y for diffeq call using the temp_double dot product.
             this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + temp_double * this->step;
         }
         // Update time and call the diffeq.
@@ -852,22 +861,16 @@ void RKSolver::p_update_Q(double* Q_ptr)
         for (unsigned int y_i = 0; y_i < this->num_y; y_i++)
         {
             // Store dy from the last call.
-            K_extended_ptr[y_i * 3] = this->dy_now_ptr[y_i];
+            K_ni = this->dy_now_ptr[y_i];
+            K_extended_ptr[y_i * 3] = K_ni;
 
             // Dot Product (K.T dot a) * h
-            stride_K = this->n_stages_p1 * y_i;
-            stride_A = DOP853_AEXTRA_cols;
-            // Go up to a max of Row 13
-            temp_double = 0.0;
-            for (unsigned int n_i = 0; n_i < this->n_stages_p1; n_i++)
-            {
-                temp_double += this->K_ptr[stride_K + n_i] * DOP853_AEXTRA_ptr[stride_A + n_i];
-            }
-            // Then add Row 14
-            temp_double += K_extended_ptr[y_i * 3] * DOP853_AEXTRA_ptr[stride_A + 13];
+            // Add row 14 to the remaining dot product trackers
+            temp_double_2 += K_ni * DOP853_AEXTRA_ptr[3 * 13 + 1];
+            temp_double_3 += K_ni * DOP853_AEXTRA_ptr[3 * 13 + 2];
 
             // Update y for diffeq call
-            this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + temp_double * this->step;
+            this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + temp_double_2 * this->step;
         }
         // Update time and call the diffeq.
         this->t_now_ptr[0] = this->t_old + (this->step * DOP853_CEXTRA_ptr[1]);
@@ -877,24 +880,15 @@ void RKSolver::p_update_Q(double* Q_ptr)
         for (unsigned int y_i = 0; y_i < this->num_y; y_i++)
         {
             // Store dy from the last call.
-            K_extended_ptr[y_i * 3 + 1] = this->dy_now_ptr[y_i];
+            K_ni = this->dy_now_ptr[y_i];
+            K_extended_ptr[y_i * 3 + 1] = K_ni;
 
-            // Dot Product (K.T dot a) * h
-            stride_K = this->n_stages_p1 * y_i;
-            stride_A = DOP853_AEXTRA_cols * 2;
-            // Go up to a max of Row 13
-            temp_double = 0.0;
-            for (unsigned int n_i = 0; n_i < this->n_stages_p1; n_i++)
-            {
-                temp_double += this->K_ptr[stride_K + n_i] * DOP853_AEXTRA_ptr[stride_A + n_i];
-            }
-            // Then add Row 14
-            temp_double += K_extended_ptr[y_i * 3] * DOP853_AEXTRA_ptr[stride_A + 13];
-            // Then add Row 15
-            temp_double += K_extended_ptr[y_i * 3 + 1] * DOP853_AEXTRA_ptr[stride_A + 14];
+            // Dot Product (K.T dot a) * h            
+            // Add row 15 to the remaining dot product trackers
+            temp_double_3 += K_ni * DOP853_AEXTRA_ptr[3 * 14 + 2];
 
             // Update y for diffeq call
-            this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + temp_double * this->step;
+            this->y_now_ptr[y_i] = this->y_old_ptr[y_i] + temp_double_3 * this->step;
         }
         // Update time and call the diffeq.
         this->t_now_ptr[0] = this->t_old + (this->step * DOP853_CEXTRA_ptr[2]);
@@ -925,11 +919,10 @@ void RKSolver::p_update_Q(double* Q_ptr)
             // Work on dot product between D and K
             stride_K = this->n_stages_p1 * y_i;
             // D Row 4
-            temp_double          = 0.0;
-            double temp_double_2 = 0.0;
-            double temp_double_3 = 0.0;
-            double temp_double_4 = 0.0;
-            double K_ni = 0.0;
+            temp_double   = 0.0;
+            temp_double_2 = 0.0;
+            temp_double_3 = 0.0;
+            temp_double_4 = 0.0;
 
             // First add up normal K
             for (unsigned int n_i = 0; n_i < this->n_stages_p1; n_i++)

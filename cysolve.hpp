@@ -32,7 +32,8 @@ void baseline_cysolve_ivp_noreturn(
     const double first_step_size
 );
 
-std::shared_ptr<CySolverResult> baseline_cysolve_ivp_noreturn(
+
+std::shared_ptr<CySolverResult> baseline_cysolve_ivp(
     DiffeqFuncType diffeq_ptr,
     const double* t_span_ptr,
     const double* y0_ptr,

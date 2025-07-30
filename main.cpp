@@ -7,7 +7,7 @@
 #include <cmath>
 #include "cysolve.hpp"
 
-static void test_accur_diffeq(double* dy_ptr, double time, double* y_ptr, const double* args_ptr)
+static void test_accur_diffeq(double* dy_ptr, double time, double* y_ptr, char* args_ptr, PreEvalFunc pre_eval_func)
 {
     const double y0 = y_ptr[0];
     const double y1 = y_ptr[1];
@@ -16,7 +16,7 @@ static void test_accur_diffeq(double* dy_ptr, double time, double* y_ptr, const 
     dy_ptr[1] = std::cos(time) + y0;
 }
 
-static void test_diffeq(double* dy_ptr, double time, double* y_ptr, const double* args_ptr)
+static void test_diffeq(double* dy_ptr, double time, double* y_ptr, char* args_ptr, PreEvalFunc pre_eval_func)
 {
     const double y0 = y_ptr[0];
     const double y1 = y_ptr[1];
@@ -28,7 +28,7 @@ static void test_diffeq(double* dy_ptr, double time, double* y_ptr, const double
     dy_ptr[1] = e2 * y1;
 }
 
-static void test_extra_diffeq(double* dy_ptr, double time, double* y_ptr, const double* args_ptr)
+static void test_extra_diffeq(double* dy_ptr, double time, double* y_ptr, char* args_ptr, PreEvalFunc pre_eval_func)
 {
     const double y0 = y_ptr[0];
     const double y1 = y_ptr[1];
@@ -143,19 +143,25 @@ void test_regular(
                 expected_size,
                 num_extra,
                 nullptr,
+                0, // size_of_args
                 100000,
                 2000,
                 save_dense,
                 t_eval_ptr,
                 len_t_eval,
+                nullptr, // pre_eval_func
                 rtol,
-                atol
+                atol,
+                nullptr, // rtols_ptr
+                nullptr, // Atols_ptr
+                INF, // max_step_size
+                0.0 // first_step_size
             );
 
             final_size = result->size;
             msg_ptr = result->message_ptr;
             num_interps = result->num_interpolates;
-            t_at_20 = result->time_domain[4];
+            t_at_20 = result->time_domain_vec[4];
             y_at_20_ptr = &result->solution[(num_y + num_extra) * 4];
             result->call(t_at_20, y_int_at_20_ptr);
 
@@ -196,7 +202,7 @@ void test_regular(
 
     for (size_t i = 0; i < final_size; i++)
     {
-        datastream << result->time_domain[i] << ", " << result->solution[2 * i] << ", " << result->solution[2 * i + 1] << std::endl;
+        datastream << result->time_domain_vec[i] << ", " << result->solution[2 * i] << ", " << result->solution[2 * i + 1] << std::endl;
     }
     datastream.close();
     std::cout << "Data saved." << std::endl;
@@ -209,7 +215,7 @@ int main(){
 
     /* Speed Runs (JPR Work Desktop):
     * No Dense; No t_eval
-    *   603.95us; 610.87us
+    *   755.773us; 610.87us
     * 
     * With Dense; No t_eval
     *   1089.25us; 1094.09

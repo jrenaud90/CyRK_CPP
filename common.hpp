@@ -4,10 +4,8 @@
 #include <limits>
 
 // Pre-processor constants
-static const int Y_LIMIT      = 32;
-static const int DY_LIMIT     = 64;  // dy limit is defined by Y_LIMIT and number of extra output allowed. Typically we allow 2x the Y_LIMIT.
-static const int MESSAGE_SIZE = 128;
-static const int BUFFER_SIZE  = 16;
+static const int MESSAGE_SIZE   = 128;
+static const size_t BUFFER_SIZE = 16;
 
 // Integration Constants
 // Multiply steps computed from asymptotic behaviour of errors by this.
@@ -39,7 +37,11 @@ static const double DYNAMIC_GROWTH_RATE = 1.618;
 static constexpr double SIZE_MAX_DBL = 0.99 * SIZE_MAX;
 
 
-typedef void (*DiffeqFuncType)(double*, double, double*, const double*);
+
+typedef void (*PreEvalFunc)(char*, double, double*, char*);
+
+typedef void (*DiffeqFuncType)(double*, double, double*, char*, PreEvalFunc);
+
 
 
 struct MaxNumStepsOutput
@@ -56,14 +58,14 @@ struct MaxNumStepsOutput
 void round_to_2(size_t& initial_value);
 
 MaxNumStepsOutput find_max_num_steps(
-    const int num_y,
-    const int num_extra,
+    const size_t num_y,
+    const size_t num_extra,
     const size_t max_num_steps,
     const size_t max_ram_MB);
 
 
 size_t find_expected_size(
-    int num_y,
-    int num_extra,
+    size_t num_y,
+    size_t num_extra,
     double t_delta_abs,
     double rtol_min);

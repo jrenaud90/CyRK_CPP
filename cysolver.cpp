@@ -1,7 +1,10 @@
 #include "cysolver.hpp"
+#include "dense.hpp"
+#include "cysolution.hpp"
 
 // !!!
 // Uncomment these dummy methods if working outside of CyRK and you just want the program to compile and run for testing/developing the C++ only code.
+
 
 bool import_CyRK__cy__pysolver_cyhook()
 {
@@ -21,33 +24,36 @@ void Py_XDECREF(PyObject* x)
 {
 }
 
+
 // Constructors
 CySolverBase::CySolverBase() {}
 CySolverBase::CySolverBase(
-    DiffeqFuncType diffeq_ptr,
-    std::shared_ptr<CySolverResult> storage_ptr,
-    const double t_start,
-    const double t_end,
-    const double* const y0_ptr,
-    const unsigned int num_y,
-    const unsigned int num_extra,
-    const double* const args_ptr,
-    const size_t max_num_steps,
-    const size_t max_ram_MB,
-    const bool use_dense_output,
-    const double* t_eval,
-    const size_t len_t_eval) :
-    status(0),
-    num_y(num_y),
-    num_extra(num_extra),
-    t_start(t_start),
-    t_end(t_end),
-    storage_ptr(storage_ptr),
-    diffeq_ptr(diffeq_ptr),
-    args_ptr(args_ptr),
-    use_dense_output(use_dense_output),
-    t_eval_ptr(t_eval),
-    len_t_eval(len_t_eval)
+        DiffeqFuncType diffeq_ptr,
+        CySolverResult* storage_ptr,
+        const double t_start,
+        const double t_end,
+        const double* const y0_ptr,
+        const size_t num_y,
+        const size_t num_extra,
+        const char* args_ptr,
+        const size_t size_of_args,
+        const size_t max_num_steps,
+        const size_t max_ram_MB,
+        const bool use_dense_output,
+        const double* t_eval,
+        const size_t len_t_eval,
+        PreEvalFunc pre_eval_func) :
+            diffeq_ptr(diffeq_ptr),
+            size_of_args(size_of_args),
+            len_t_eval(len_t_eval),
+            use_dense_output(use_dense_output),
+            pre_eval_func(pre_eval_func),
+            status(0),
+            num_y(num_y),
+            num_extra(num_extra),
+            storage_ptr(storage_ptr),
+            t_start(t_start),
+            t_end(t_end)
 {
     // Parse inputs
     this->capture_extra = num_extra > 0;
@@ -55,21 +61,24 @@ CySolverBase::CySolverBase(
     // Setup storage
     this->storage_ptr->update_message("CySolverBase Initializing.");
 
-    // Check for errors
-    if (this->num_extra > (DY_LIMIT - Y_LIMIT))
+    // Build storage for args
+    if (args_ptr && (this->size_of_args > 0))
     {
-        this->status = -9;
-        this->storage_ptr->error_code = -1;
-        this->storage_ptr->update_message("CySolverBase Attribute Error: `num_extra` exceeds the maximum supported size.");
+        // Allocate memory for the size of args.
+        // Store void pointer to it.
+        this->args_char_vec.resize(this->size_of_args);
+
+        // Copy over contents of arg
+        this->args_ptr = this->args_char_vec.data();
+        std::memcpy(this->args_ptr, args_ptr, this->size_of_args);
+    }
+    else
+    {
+        this->args_ptr = nullptr;
     }
 
-    if (this->num_y > Y_LIMIT)
-    {
-        this->status = -9;
-        this->storage_ptr->error_code = -1;
-        this->storage_ptr->update_message("CySolverBase Attribute Error: `num_y` exceeds the maximum supported size.");
-    }
-    else if (this->num_y == 0)
+    // Check for errors
+    if (this->num_y == 0)
     {
         this->status = -9;
         this->storage_ptr->error_code = -1;
@@ -80,8 +89,30 @@ CySolverBase::CySolverBase(
     this->num_y_dbl  = (double)this->num_y;
     this->num_y_sqrt = std::sqrt(this->num_y_dbl);
     this->num_dy     = this->num_y + this->num_extra;
+
+    // Set up heap allocated arrays
+    this->y0.resize(this->num_y);
+    this->y_old.resize(this->num_y);
+    this->y_now.resize(this->num_y);
+    this->y_tmp.resize(this->num_y);
+    this->y_interp.resize(this->num_y);
+    // For dy, both the dy/dt and any extra outputs are stored. So the maximum size is `num_y` (25) + `num_extra` (25)
+    this->dy_old.resize(this->num_dy);
+    this->dy_now.resize(this->num_dy);
+    this->dy_tmp.resize(this->num_dy);
+
     // Make a copy of y0
-    std::memcpy(this->y0_ptr, y0_ptr, sizeof(double) * this->num_y);
+    std::memcpy(&this->y0[0], y0_ptr, sizeof(double) * this->num_y);
+    
+    // Parse t_eval
+    if ((t_eval) && (this->len_t_eval > 0))
+    {
+        this->use_t_eval = true;
+    }
+    else
+    {
+        this->use_t_eval = false;
+    }
 
     // Parse time information
     this->t_delta = t_end - t_start;
@@ -91,11 +122,28 @@ CySolverBase::CySolverBase(
         // Forward integration
         this->direction_flag = true;
         this->direction_inf = INF;
+
+        if (this->use_t_eval)
+        {
+            // We do not need to copy the values since the integration is forward.
+            this->t_eval_vec.resize(len_t_eval);
+            this->t_eval_ptr = this->t_eval_vec.data();
+            std::memcpy(this->t_eval_ptr, t_eval, sizeof(double) * len_t_eval);
+        }
     }
     else {
         // Backward integration
         this->direction_flag = false;
         this->direction_inf = -INF;
+
+        if (this->use_t_eval)
+        {
+            // We need to make sure that t_eval is properly sorted or the search algorithm will fail.
+            // Need to make a copy because we do not want to change the array that was passed in by the user.
+            this->t_eval_vec.resize(len_t_eval);
+            this->t_eval_ptr = this->t_eval_vec.data();
+            std::reverse_copy(t_eval, t_eval + len_t_eval, this->t_eval_ptr);
+        }
     }
 
     // Parse maximum number of steps
@@ -110,33 +158,24 @@ CySolverBase::CySolverBase(
 
     // Bind diffeq to C++ version
     this->diffeq = &CySolverBase::cy_diffeq;
-
-    // Parse t_eval
-    if (this->t_eval_ptr && this->len_t_eval > 0)
-    {
-        this->use_t_eval = true;
-        if (!this->direction_flag)
-        {
-            // TODO: add in support for backwards integration when t_eval is provided.
-            this->status = -70;
-            this->storage_ptr->error_code = -70;
-            this->storage_ptr->update_message("Not Implemented Error: Can only do forward integration when t_eval is provided.");
-        }
-    }
 }
 
 
 // Destructors
 CySolverBase::~CySolverBase()
 {
-    this->storage_ptr = nullptr;
-    if (this->use_pysolver)
+    if (this->deconstruct_python)
     {
         // Decrease reference count on the cython extension class instance
         Py_XDECREF(this->cython_extension_class_instance);
     }
-}
 
+    // Set storage pointer to null
+    if (this->storage_ptr)
+    {
+        this->storage_ptr = nullptr;
+    }
+}
 
 // Protected methods
 void CySolverBase::p_estimate_error()
@@ -150,9 +189,40 @@ void CySolverBase::p_step_implementation()
 }
 
 // Public methods
+void CySolverBase::offload_to_temp()
+{
+    /* Save "now" variables to temporary arrays so that the now array can be overwritten. */
+    std::memcpy(&this->y_tmp[0], &this->y_now[0], sizeof(double) * this->num_y);
+    std::memcpy(&this->dy_tmp[0], &this->dy_now[0], sizeof(double) * this->num_dy);
+    this->t_tmp = this->t_now;
+}
+
+void CySolverBase::load_back_from_temp()
+{
+    /* Copy values from temporary array variables back into the "now" arrays. */
+    std::memcpy(&this->y_now[0], &this->y_tmp[0], sizeof(double) * this->num_y);
+    std::memcpy(&this->dy_now[0], &this->dy_tmp[0], sizeof(double) * this->num_dy);
+    this->t_now = this->t_tmp;
+}
+
+void CySolverBase::set_Q_order(size_t* Q_order_ptr)
+{
+    // Overwritten by subclasses.
+}
+
+void CySolverBase::set_Q_array(double* Q_ptr)
+{
+    // Overwritten by subclasses.
+}
+
 void CySolverBase::calc_first_step_size()
 {
     // Overwritten by subclasses.
+}
+
+NowStatePointers CySolverBase::get_now_state()
+{
+    return NowStatePointers(&this->t_now, this->y_now.data(), this->dy_now.data());
 }
 
 bool CySolverBase::check_status() const
@@ -171,6 +241,11 @@ bool CySolverBase::check_status() const
             return false;
         }
     }
+    else
+    {
+        // No storage!
+        return false;
+    }
 
     // If we reach here then we should be good to go.
     return true;
@@ -179,7 +254,7 @@ bool CySolverBase::check_status() const
 void CySolverBase::cy_diffeq() noexcept
 {
     // Call c function
-    this->diffeq_ptr(this->dy_now_ptr, this->t_now_ptr[0], this->y_now_ptr, this->args_ptr);
+    this->diffeq_ptr(this->dy_now.data(), this->t_now, this->y_now.data(), this->args_ptr, this->pre_eval_func);
 }
 
 void CySolverBase::reset()
@@ -187,62 +262,66 @@ void CySolverBase::reset()
     this->status = 0;
     this->reset_called = false;
 
+    // Reset runtime bools
+    this->skip_t_eval = false;
+
     // Reset time
-    this->t_now_ptr[0] = this->t_start;
+    this->t_now = this->t_start;
     this->t_old = this->t_start;
     this->len_t = 1;
 
     // Reset ys
-    std::memcpy(this->y_now_ptr, this->y0_ptr, sizeof(double) * this->num_y);
-    std::memcpy(this->y_old_ptr, this->y0_ptr, sizeof(double) * this->num_y);
+    std::memcpy(&this->y_now[0], &this->y0[0], sizeof(double) * this->num_y);
+    std::memcpy(&this->y_old[0], &this->y0[0], sizeof(double) * this->num_y);
 
     // Call differential equation to set dy0
     this->diffeq(this);
 
     // Update dys
-    std::memcpy(this->dy_old_ptr, this->dy_now_ptr, sizeof(double) * this->num_y);
-
-    // Initialize storage
-    this->storage_ptr->reset();
-    this->storage_ptr->update_message("CySolverStorage reset, ready for data.");
+    std::memcpy(&this->dy_old[0], &this->dy_now[0], sizeof(double) * this->num_y);
 
     // If t_eval is set then don't save initial conditions. They will be captured during stepping.
     if (!this->use_t_eval)
     {
         // Store initial conditions
-        this->storage_ptr->save_data(this->t_now_ptr[0], this->y_now_ptr, this->dy_now_ptr);
+        this->storage_ptr->save_data(this->t_now, &this->y_now[0], &this->dy_now[0]);
     }
     
     // Construct interpolator using t0 and y0 as its data point
     if (this->use_dense_output)
     {
-        CySolverDense* dense_output_ptr = this->p_dense_output_heap();
-        // Save interpolator
-        this->storage_ptr->save_dense(this->t_now_ptr[0], dense_output_ptr);
+        int built_dense = this->storage_ptr->build_dense(true);
+        if (built_dense < 0)
+        {
+            this->status = -100;
+        }
     }
 
     // Prep for t_eval
-    this->t_eval_index_old = 0;
+    if (this->direction_flag)
+    {
+        this->t_eval_index_old = 0;
+    }
+    else
+    {
+        this->t_eval_index_old = this->len_t_eval;
+    }
 
     // Done with reset
     this->reset_called = true;
 }
 
-#include <cstdio>
-
 void CySolverBase::take_step()
-{    
+{ 
     if (!this->reset_called) [[unlikely]]
     {
         // Reset must be called first.
         this->reset();
     }
 
-    bool skip_t_eval = false;
-
     if (!this->status)
     {
-        if (this->t_now_ptr[0] == this->t_end) [[unlikely]]
+        if (this->t_now == this->t_end) [[unlikely]]
         {
             // Integration finished
             this->t_old = this->t_end;
@@ -268,56 +347,82 @@ void CySolverBase::take_step()
 
             this->p_step_implementation();
             this->len_t++;
+            this->storage_ptr->steps_taken++;
 
             // Take care of dense output and t_eval
+            int dense_built = 0;
             if (this->use_dense_output)
             {
-                // We need to save many dense interpolators to storage. So let's heap allocate them.
-                CySolverDense* dense_output_heap_ptr = this->p_dense_output_heap();
-                // Save to storage array.
-                this->storage_ptr->save_dense(this->t_now_ptr[0], dense_output_heap_ptr);
+                // We need to save many dense interpolators to storage. So let's heap allocate them (that is what "true" indicates)
+                dense_built = this->storage_ptr->build_dense(true);
+                if (dense_built < 0)
+                {
+                    this->status = -100;
+                }
             }
 
-            if (this->use_t_eval && !skip_t_eval)
+            if (this->use_t_eval && !this->skip_t_eval)
             {
                 // Don't save data at the end
                 save_data = false;
 
-                // We are not saving interpolators to storage but we still need one to work on t_eval. 
-                // We will only ever need 1 interpolator per step. So let's just stack allocate that one.
-                CySolverDense dense_output(
-                    this->integration_method,
-                    this->t_old,
-                    this->t_now_ptr[0],
-                    this->y_old_ptr,
-                    this->num_y,
-                    0 // Fake Q order just for consistent constructor call
-                    );
-                // Update the dense output class with integrator-specific data
-                this->p_dense_output_stack(dense_output);
-
                 // Need to step through t_eval and call dense to determine correct data at each t_eval step.
                 // Find the first index in t_eval that is close to current time.
-                size_t t_eval_index_new = 1 + binary_search_with_guess(this->t_now_ptr[0], this->t_eval_ptr, this->len_t_eval, this->t_eval_index_old);
-                if (t_eval_index_new >= this->len_t_eval)
-                {
-                    t_eval_index_new = this->len_t_eval;
-                    // We are done with t_eval. Skip it from now on. 
-                    skip_t_eval = true;
-                }                
-                
+
                 // Check if there are any t_eval steps between this new index and the last index.
-                int t_eval_index_delta = (int)t_eval_index_new - (int)this->t_eval_index_old;
+                // Get lowest and highest indices
+                auto lower_i = std::lower_bound(this->t_eval_vec.begin(), this->t_eval_vec.end(), this->t_now) - this->t_eval_vec.begin();
+                auto upper_i = std::upper_bound(this->t_eval_vec.begin(), this->t_eval_vec.end(), this->t_now) - this->t_eval_vec.begin();
+                
+                size_t t_eval_index_new;
+                if (lower_i == upper_i)
+                {
+                    // Only 1 index came back wrapping the value. See if it is different from before.
+                    t_eval_index_new = lower_i;  // Doesn't matter which one we choose
+                }
+                else if (this->direction_flag)
+                {
+                    // Two different indicies returned. Since we are working our way from low to high values we want the upper one.
+                    t_eval_index_new = upper_i;
+                    if (t_eval_index_new == this->len_t_eval)
+                    {
+                        this->skip_t_eval = true;
+                    }
+                }
+                else
+                {
+                    // Two different indicies returned. Since we are working our way from high to low values we want the lower one.
+                    t_eval_index_new = lower_i;
+                    if (t_eval_index_new == 0)
+                    {
+                        this->skip_t_eval = true;
+                    }
+                }
+
+                int t_eval_index_delta;
+                if (this->direction_flag)
+                {
+                    t_eval_index_delta = (int)t_eval_index_new - (int)this->t_eval_index_old;
+                }
+                else
+                {
+                    t_eval_index_delta = (int)this->t_eval_index_old - (int)t_eval_index_new;
+                }
+                
                 // If t_eval_index_delta == 0 then there are no new interpolations required between the last integration step and now.
                 // ^ In this case do not save any data, we are done with this step.
-
                 if (t_eval_index_delta > 0)
                 {
+                    if (dense_built == 0)
+                    {
+                        // We are not saving interpolators to storage but we still need one to work on t_eval. 
+                        // We will only ever need 1 interpolator per step. So let's just stack allocate that one.
+                        dense_built = this->storage_ptr->build_dense(false);
+                    }
+
                     // There are steps we need to interpolate over.
                     // Start with the old time and add t_eval step sizes until we are done.
                     // Create a y array and dy_array to use during interpolation
-                    double y_interp[Y_LIMIT] = { };
-                    double* y_interp_ptr     = &y_interp[0];
 
                     // If capture extra is set to true then we need to hold onto a copy of the current state
                     // The current state pointers must be overwritten if extra output is to be captured.
@@ -327,20 +432,28 @@ void CySolverBase::take_step()
                     if (this->capture_extra)
                     {
                         // We need to copy the current state of y, dy, and time
-                        this->t_old = this->t_now_ptr[0];
-                        std::memcpy(this->y_old_ptr, this->y_now_ptr, sizeof(double) * this->num_y);
-                        std::memcpy(this->dy_old_ptr, this->dy_now_ptr, sizeof(double) * this->num_dy);
+                        this->t_old = this->t_now;
+                        std::memcpy(&this->y_old[0], &this->y_now[0], sizeof(double) * this->num_y);
+                        std::memcpy(&this->dy_old[0], &this->dy_now[0], sizeof(double) * this->num_dy);
 
                         // Don't update these again at the end
                         prepare_for_next_step = false;
                     }
 
-                    for (size_t i = 0; i < t_eval_index_delta; i++)
+                    for (int i = 0; i < t_eval_index_delta; i++)
                     {
-                        double t_interp = this->t_eval_ptr[this->t_eval_index_old + i];
+                        double t_interp;
+                        if (this->direction_flag)
+                        {
+                            t_interp = this->t_eval_ptr[this->t_eval_index_old + i];
+                        }
+                        else
+                        {
+                            t_interp = this->t_eval_ptr[this->t_eval_index_old - i - 1];
+                        }
 
                         // Call the interpolator using this new time value.
-                        dense_output.call(t_interp, y_interp_ptr);
+                        this->storage_ptr->dense_vec.back().call(t_interp, this->y_interp.data());
 
                         if (this->capture_extra)
                         {
@@ -350,14 +463,14 @@ void CySolverBase::take_step()
                             // So for now we have to do a lot of copying of data.
 
                             // Copy the interpreted y onto the current y_now_ptr. Also update t_now
-                            this->t_now_ptr[0] = t_interp;
-                            std::memcpy(this->y_now_ptr, y_interp_ptr, sizeof(double) * this->num_y);
+                            this->t_now = t_interp;
+                            std::memcpy(&this->y_now[0], this->y_interp.data(), sizeof(double) * this->num_y);
 
                             // Call diffeq to update dy_now_ptr with the extra output.
                             this->diffeq(this);
                         }
                         // Save interpolated data to storage. If capture extra is true then dy_now holds those extra values. If it is false then it won't hurt to pass dy_now to storage.
-                        this->storage_ptr->save_data(t_interp, y_interp_ptr, this->dy_now_ptr);
+                        this->storage_ptr->save_data(t_interp, this->y_interp.data(), &this->dy_now[0]);
                     }
                 }
                 // Update the old index for the next step
@@ -366,15 +479,15 @@ void CySolverBase::take_step()
             if (save_data)
             {
                 // No data has been saved from the current step. Save the integrator data for this step as the solution.
-                this->storage_ptr->save_data(this->t_now_ptr[0], this->y_now_ptr, this->dy_now_ptr);
+                this->storage_ptr->save_data(this->t_now, &this->y_now[0], &this->dy_now[0]);
             }
 
             if (prepare_for_next_step)
             {
                 // Prep for next step
-                this->t_old = this->t_now_ptr[0];
-                std::memcpy(this->y_old_ptr, this->y_now_ptr, sizeof(double) * this->num_y);
-                std::memcpy(this->dy_old_ptr, this->dy_now_ptr, sizeof(double) * this->num_dy);
+                this->t_old = this->t_now;
+                std::memcpy(&this->y_old[0], &this->y_now[0], sizeof(double) * this->num_y);
+                std::memcpy(&this->dy_old[0], &this->dy_now[0], sizeof(double) * this->num_dy);
             }
         }
     }
@@ -414,25 +527,6 @@ void CySolverBase::take_step()
             this->storage_ptr->update_message("Unknown status encountered during integration.");
             break;
         }
-        
-        // Call the finalizer on the storage class instance
-        this->storage_ptr->finalize();
-    }
-}
-
-
-void CySolverBase::change_storage(std::shared_ptr<CySolverResult> new_storage_ptr, bool auto_reset)
-{   
-    // Change the storage reference. 
-    this->storage_ptr = new_storage_ptr;
-    
-    // Set status to indicate that storage has changed but reset has not been updated
-    this->status = 2;
-
-    // Changing storage requires a reset
-    if (auto_reset)
-    {
-        this->reset();
     }
 }
 
@@ -444,24 +538,6 @@ void CySolverBase::solve()
     {
         this->take_step();
     }
-}
-
-/* Dense Output Methods */
-CySolverDense* CySolverBase::p_dense_output_heap()
-{
-    return new CySolverDense(
-        this->integration_method,
-        this->t_old,
-        this->t_now_ptr[0],
-        this->y_old_ptr,
-        this->num_y,
-        0 // Fake Q order just for consistent constructor call
-        );
-}
-
-void CySolverBase::p_dense_output_stack(CySolverDense& dense_output_ptr)
-{
-    // Don't do anything. Subclasses will override this method.
 }
 
 
@@ -488,8 +564,8 @@ void CySolverBase::set_cython_extension_instance(PyObject* cython_extension_clas
         }
         else
         {
-            // TODO: Do we need to decref this at some point? During CySolver's deconstruction?
             Py_XINCREF(this->cython_extension_class_instance);
+            this->deconstruct_python = true;
         }
     }
 }

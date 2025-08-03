@@ -86,7 +86,7 @@ void test_regular(
     }
 
     double t_start = 0.0;
-    int max_i = 1000;
+    int max_i = 500;
 
     std::vector<double> y0_vec = std::vector<double>(2);
     y0_vec[0] = 20.0; // Initial condition for y0
@@ -104,6 +104,7 @@ void test_regular(
     size_t expected_size = 0;
 
     double running_sum = 0.0;
+    double running_sum_ps = 0.0;
     size_t final_size;
     size_t sol_size;
     size_t num_interps = 0;
@@ -117,8 +118,9 @@ void test_regular(
     auto t1 = std::chrono::high_resolution_clock::now();
     auto t2 = std::chrono::high_resolution_clock::now();
     int k = 0;
-    int k_max = 180; // 15
+    int k_max = 25; // 15
     double total_runner = 0.0;
+    double total_runner_ps = 0.0;
     double t_at_20;
     double y_at_20[2] = { -99.0, -99.0 };
     double* y_at_20_ptr = &y_at_20[0];
@@ -131,6 +133,7 @@ void test_regular(
     while (k < k_max)
     {
         running_sum = 0.0;
+        running_sum_ps = 0.0;
 
         size_t cheat_check = t_end; // uncomment if you want to make sure things are changing every step t_end + 100 * k;
 
@@ -209,6 +212,7 @@ void test_regular(
             t2 = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double, std::micro> ms_double = t2 - t1;
             running_sum += ms_double.count();
+            running_sum_ps += ms_double.count() / final_size;
             //std::cout << ms_double.count() << "ms\n";
         }
 
@@ -225,15 +229,18 @@ void test_regular(
         std::cout << "DENSE INTERP:: " << "y0 = " << y_int_at_20_ptr[0] << ", y1 = " << y_int_at_20_ptr[1] << std::endl;
         std::cout << "Message: " << msg << std::endl;
         std::cout << "AVERAGE: " << running_sum / max_i << "us\n" << std::endl;
+        std::cout << "AVERAGE PS: " << running_sum_ps / max_i << "us\n" << std::endl;
         if (k > 3)
         {
             total_runner += running_sum / max_i;
+            total_runner_ps += running_sum_ps / max_i;
         }
         k += 1;
         //break;
     }
 
-    std::cout << "Done! Final Avg: " << total_runner / (k_max - 4) << std::endl << "Saving data..." << std::endl;
+    std::cout << "Done! Final Avg: " << total_runner / (k_max - 4) << std::endl;
+    std::cout << "      Final Avg PS: " << total_runner_ps / (k_max - 4) << std::endl << "Saving data..." << std::endl;
 
 
     std::ofstream datastream;

@@ -160,7 +160,7 @@ void CySolverBase::p_step_implementation() noexcept
     // Overwritten by subclasses.
 }
 
-void CySolverBase::p_cy_diffeq() noexcept
+inline void CySolverBase::p_cy_diffeq() noexcept
 {
     // Call c function
     this->diffeq_ptr(
@@ -389,7 +389,7 @@ NowStatePointers CySolverBase::get_now_state()
     return NowStatePointers(&this->t_now, this->y_now_ptr, this->dy_now_ptr);
 }
 
-bool CySolverBase::check_status() const
+inline bool CySolverBase::check_status() const
 {
     if (this->storage_ptr) [[likely]]
     {

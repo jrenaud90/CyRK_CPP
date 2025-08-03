@@ -115,7 +115,7 @@ protected:
     virtual CyrkErrorCodes p_additional_setup() noexcept;
     virtual void p_estimate_error() noexcept;
     virtual void p_step_implementation() noexcept;
-    void p_cy_diffeq() noexcept;
+    inline void p_cy_diffeq() noexcept;
     virtual void p_calc_first_step_size() noexcept;
 
 public:
@@ -128,7 +128,7 @@ public:
     void offload_to_temp() noexcept;
     void load_back_from_temp() noexcept;
     virtual CyrkErrorCodes setup();
-    bool check_status() const;
+    inline bool check_status() const;
     void take_step();
     void solve();
     // Diffeq can either be the C++ class method or the python hook diffeq. By default set to C++ version.

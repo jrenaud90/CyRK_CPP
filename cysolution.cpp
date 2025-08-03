@@ -16,26 +16,8 @@ CySolverResult::CySolverResult(ODEMethod integration_method_) :
         integrator_method(integration_method_)
 {
     // The result constructor's only job is to build the solver object and allocate its memory.
-    switch (this->integrator_method)
-    {
-    case ODEMethod::RK23:
-        // RK23
-        this->solver_uptr = std::make_unique<RK23>(this);
-        break;
-    case ODEMethod::RK45:
-        // RK45
-        this->solver_uptr = std::make_unique<RK45>(this);
-        break;
-    case ODEMethod::DOP853:
-        // DOP853
-        this->solver_uptr = std::make_unique<DOP853>(this);
-        break;
-    [[unlikely]] default:
-        this->solver_uptr = nullptr;
-        this->success = false;
-        this->update_status(CyrkErrorCodes::UNSUPPORTED_UNKNOWN_MODEL);
-        break;
-    }
+    CyrkErrorCodes solver_build_status = this->p_build_solver();
+    this->update_status(solver_build_status);
 }
 
 /* ========================================================================= */
@@ -59,6 +41,47 @@ CySolverResult::~CySolverResult()
 /* ========================================================================= */
 /* =========================  Protected Methods  =========================== */
 /* ========================================================================= */
+CyrkErrorCodes CySolverResult::p_build_solver()
+{
+    CyrkErrorCodes build_status = CyrkErrorCodes::NO_ERROR;
+
+    if (this->solver_uptr)
+    {
+        // Delete old solver.
+        this->solver_uptr.reset();
+    }
+
+    // The result constructor's only job is to build the solver object and allocate its memory.
+    try
+    {
+        switch (this->integrator_method)
+        {
+        case ODEMethod::RK23:
+            // RK23
+            this->solver_uptr = std::make_unique<RK23>(this);
+            break;
+        case ODEMethod::RK45:
+            // RK45
+            this->solver_uptr = std::make_unique<RK45>(this);
+            break;
+        case ODEMethod::DOP853:
+            // DOP853
+            this->solver_uptr = std::make_unique<DOP853>(this);
+            break;
+        [[unlikely]] default:
+            this->solver_uptr = nullptr;
+            build_status = CyrkErrorCodes::UNSUPPORTED_UNKNOWN_MODEL;
+            break;
+        }
+    }
+    catch (std::bad_alloc const&)
+    {
+        // Memory allocation failed, return error code
+        build_status = CyrkErrorCodes::MEMORY_ALLOCATION_ERROR;
+    }
+    return build_status;
+}
+
 void CySolverResult::p_expand_data_storage()
 {
     double new_storage_size_dbl = std::floor(DYNAMIC_GROWTH_RATE * (double)this->storage_capacity);
@@ -182,13 +205,6 @@ CyrkErrorCodes CySolverResult::setup(std::unique_ptr<ProblemConfig> provided_con
 
     while (setup_status == CyrkErrorCodes::NO_ERROR)
     {
-        if ((not this->solver_uptr) or 
-            ((not provided_config_uptr) and (not this->config_uptr))) // User may have manually updated the current config so the argument may be null.
-        {
-            setup_status = CyrkErrorCodes::UNINITIALIZED_CLASS;
-            break;
-        }
-
         // Reset trackers
         this->size             = 0;
         this->num_interpolates = 0;
@@ -198,6 +214,24 @@ CyrkErrorCodes CySolverResult::setup(std::unique_ptr<ProblemConfig> provided_con
         this->setup_called   = false;
         this->success        = false;
         this->retain_solver  = false;
+
+        // Solver may have been cleared if not forced to retain it.
+        if (not this->solver_uptr)
+        {
+            setup_status = this->p_build_solver();
+        }
+        // Check if the solver was built successfully.
+        if (setup_status != CyrkErrorCodes::NO_ERROR)
+        {
+            break;
+        }
+
+        if ((not this->solver_uptr) or 
+            ((not provided_config_uptr) and (not this->config_uptr))) // User may have manually updated the current config so the argument may be null.
+        {
+            setup_status = CyrkErrorCodes::UNINITIALIZED_CLASS;
+            break;
+        }
 
         // Reset all vectors
         // We resize these to zero so that we can retain any capacity they had from previous runs.

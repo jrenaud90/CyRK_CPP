@@ -1,3 +1,5 @@
+#include <numeric> 
+
 #include "rk.hpp"
 #include "dense.hpp"
 #include "cysolution.hpp"
@@ -97,41 +99,10 @@ void RKSolver::p_estimate_error() noexcept
         }
 
         // Dot product between K and E
-        double error_dot = 0.0;
         const size_t stride_K = y_i * this->n_stages_p1;
+        double* const K_ptr_yi  = &this->K_ptr[stride_K];
 
-        switch (this->n_stages)
-        {
-            // These loops go 1 more than `n_stages`.
-            // Note: DOP853 is handled in an override by its subclass.
-        case(3):
-            // RK23
-            error_dot += this->E_ptr[0] * this->K_ptr[stride_K];
-            error_dot += this->E_ptr[1] * this->K_ptr[stride_K + 1];
-            error_dot += this->E_ptr[2] * this->K_ptr[stride_K + 2];
-            error_dot += this->E_ptr[3] * this->K_ptr[stride_K + 3];
-
-            break;
-        case(6):
-            // RK45
-            error_dot += this->E_ptr[0] * this->K_ptr[stride_K];
-            error_dot += this->E_ptr[1] * this->K_ptr[stride_K + 1];
-            error_dot += this->E_ptr[2] * this->K_ptr[stride_K + 2];
-            error_dot += this->E_ptr[3] * this->K_ptr[stride_K + 3];
-            error_dot += this->E_ptr[4] * this->K_ptr[stride_K + 4];
-            error_dot += this->E_ptr[5] * this->K_ptr[stride_K + 5];
-            error_dot += this->E_ptr[6] * this->K_ptr[stride_K + 6];
-
-            break;
-        [[unlikely]] default:
-            // Resort to unrolled loops
-            // New or Non-optimized RK method. default to for loop.
-            for (size_t j = 0; j < this->n_stages_p1; j++)
-            {
-                error_dot += this->E_ptr[j] * this->K_ptr[stride_K + j];
-            }
-            break;
-        }
+        const double error_dot = std::inner_product(this->E_ptr, this->E_ptr + this->n_stages + 1, K_ptr_yi, 0.0);
 
         // Find scale of y for error calculations
         const double scale_inv = 1.0 / (atol + std::fmax(std::fabs(this->y_old_ptr[y_i]), std::fabs(this->y_now_ptr[y_i])) * rtol);
@@ -139,9 +110,7 @@ void RKSolver::p_estimate_error() noexcept
         // We need the absolute value but since we are taking the square, it is guaranteed to be positive.
         // TODO: This will need to change if CySolver ever accepts complex numbers
         // error_norm_abs = fabs(error_dot_1)
-        error_dot *= scale_inv;
-
-        this->error_norm += (error_dot * error_dot);
+        this->error_norm += ((error_dot * scale_inv) * (error_dot * scale_inv));
     }
     this->error_norm = this->step_size * std::sqrt(this->error_norm) / this->num_y_sqrt;
 }
@@ -320,193 +289,31 @@ void RKSolver::p_step_implementation() noexcept
         for (size_t s = 1; s < this->len_C; s++) {
             // Find the current time based on the old time and the step size.
             this->t_now = this->t_old + l_C_ptr[s] * this->step;
-            const size_t stride_A = s * this->len_Acols;
+            const size_t stride_A         = s * this->len_Acols;
+            const double* const l_A_ptr_s = &l_A_ptr[stride_A];
 
             for (size_t y_i = 0; y_i < this->num_y; y_i++)
             {
                 double temp_double;
-                const size_t stride_K = y_i * this->n_stages_p1;
+                const size_t stride_K         = y_i * this->n_stages_p1;
+                const double* const l_K_ptr_s = &l_K_ptr[stride_K];
+
                 // Dot Product (K, a) * step
                 switch (s)
                 {
-                case(1):
+                case 1:
                     // Set the first column of K
                     temp_double = l_dy_old_ptr[y_i];
-                    // K[0, :] == first part of the array
                     l_K_ptr[stride_K] = temp_double;
                     temp_double *= A_at_10;
                     break;
-                case(2):
-                    // Loop through (j = 0; j < s; j++)
-                    // j = 0
-                    temp_double  = l_A_ptr[stride_A]     * l_K_ptr[stride_K];
-                    // j = 1
-                    temp_double += l_A_ptr[stride_A + 1] * l_K_ptr[stride_K + 1];
-                    break;
-                case(3):
-                    // Loop through (j = 0; j < s; j++)
-                    // j = 0
-                    temp_double  = l_A_ptr[stride_A]     * l_K_ptr[stride_K];
-                    // j = 1
-                    temp_double += l_A_ptr[stride_A + 1] * l_K_ptr[stride_K + 1];
-                    // j = 2
-                    temp_double += l_A_ptr[stride_A + 2] * l_K_ptr[stride_K + 2];
-                    break;
-                case(4):
-                    // Loop through (j = 0; j < s; j++)
-                    // j = 0
-                    temp_double  = l_A_ptr[stride_A]     * l_K_ptr[stride_K];
-                    // j = 1
-                    temp_double += l_A_ptr[stride_A + 1] * l_K_ptr[stride_K + 1];
-                    // j = 2
-                    temp_double += l_A_ptr[stride_A + 2] * l_K_ptr[stride_K + 2];
-                    // j = 3
-                    temp_double += l_A_ptr[stride_A + 3] * l_K_ptr[stride_K + 3];
-                    break;
-                case(5):
-                    // Loop through (j = 0; j < s; j++)
-                    // j = 0
-                    temp_double  = l_A_ptr[stride_A]     * l_K_ptr[stride_K];
-                    // j = 1
-                    temp_double += l_A_ptr[stride_A + 1] * l_K_ptr[stride_K + 1];
-                    // j = 2
-                    temp_double += l_A_ptr[stride_A + 2] * l_K_ptr[stride_K + 2];
-                    // j = 3
-                    temp_double += l_A_ptr[stride_A + 3] * l_K_ptr[stride_K + 3];
-                    // j = 4
-                    temp_double += l_A_ptr[stride_A + 4] * l_K_ptr[stride_K + 4];
-                    break;
-                case(6):
-                    // Loop through (j = 0; j < s; j++)
-                    // j = 0
-                    temp_double  = l_A_ptr[stride_A]     * l_K_ptr[stride_K];
-                    // j = 1
-                    temp_double += l_A_ptr[stride_A + 1] * l_K_ptr[stride_K + 1];
-                    // j = 2
-                    temp_double += l_A_ptr[stride_A + 2] * l_K_ptr[stride_K + 2];
-                    // j = 3
-                    temp_double += l_A_ptr[stride_A + 3] * l_K_ptr[stride_K + 3];
-                    // j = 4
-                    temp_double += l_A_ptr[stride_A + 4] * l_K_ptr[stride_K + 4];
-                    // j = 5
-                    temp_double += l_A_ptr[stride_A + 5] * l_K_ptr[stride_K + 5];
-                    break;
-                case(7):
-                    // Loop through (j = 0; j < s; j++)
-                    // j = 0
-                    temp_double  = l_A_ptr[stride_A]     * l_K_ptr[stride_K];
-                    // j = 1
-                    temp_double += l_A_ptr[stride_A + 1] * l_K_ptr[stride_K + 1];
-                    // j = 2
-                    temp_double += l_A_ptr[stride_A + 2] * l_K_ptr[stride_K + 2];
-                    // j = 3
-                    temp_double += l_A_ptr[stride_A + 3] * l_K_ptr[stride_K + 3];
-                    // j = 4
-                    temp_double += l_A_ptr[stride_A + 4] * l_K_ptr[stride_K + 4];
-                    // j = 5
-                    temp_double += l_A_ptr[stride_A + 5] * l_K_ptr[stride_K + 5];
-                    // j = 6
-                    temp_double += l_A_ptr[stride_A + 6] * l_K_ptr[stride_K + 6];
-                    break;
-                case(8):
-                    // Loop through (j = 0; j < s; j++)
-                    // j = 0
-                    temp_double  = l_A_ptr[stride_A]     * l_K_ptr[stride_K];
-                    // j = 1
-                    temp_double += l_A_ptr[stride_A + 1] * l_K_ptr[stride_K + 1];
-                    // j = 2
-                    temp_double += l_A_ptr[stride_A + 2] * l_K_ptr[stride_K + 2];
-                    // j = 3
-                    temp_double += l_A_ptr[stride_A + 3] * l_K_ptr[stride_K + 3];
-                    // j = 4
-                    temp_double += l_A_ptr[stride_A + 4] * l_K_ptr[stride_K + 4];
-                    // j = 5
-                    temp_double += l_A_ptr[stride_A + 5] * l_K_ptr[stride_K + 5];
-                    // j = 6
-                    temp_double += l_A_ptr[stride_A + 6] * l_K_ptr[stride_K + 6];
-                    // j = 7
-                    temp_double += l_A_ptr[stride_A + 7] * l_K_ptr[stride_K + 7];
-                    break;
-                case(9):
-                    // Loop through (j = 0; j < s; j++)
-                    // j = 0
-                    temp_double  = l_A_ptr[stride_A]     * l_K_ptr[stride_K];
-                    // j = 1
-                    temp_double += l_A_ptr[stride_A + 1] * l_K_ptr[stride_K + 1];
-                    // j = 2
-                    temp_double += l_A_ptr[stride_A + 2] * l_K_ptr[stride_K + 2];
-                    // j = 3
-                    temp_double += l_A_ptr[stride_A + 3] * l_K_ptr[stride_K + 3];
-                    // j = 4
-                    temp_double += l_A_ptr[stride_A + 4] * l_K_ptr[stride_K + 4];
-                    // j = 5
-                    temp_double += l_A_ptr[stride_A + 5] * l_K_ptr[stride_K + 5];
-                    // j = 6
-                    temp_double += l_A_ptr[stride_A + 6] * l_K_ptr[stride_K + 6];
-                    // j = 7
-                    temp_double += l_A_ptr[stride_A + 7] * l_K_ptr[stride_K + 7];
-                    // j = 8
-                    temp_double += l_A_ptr[stride_A + 8] * l_K_ptr[stride_K + 8];
-                    break;
-                case(10):
-                    // Loop through (j = 0; j < s; j++)
-                    // j = 0
-                    temp_double  = l_A_ptr[stride_A]     * l_K_ptr[stride_K];
-                    // j = 1
-                    temp_double += l_A_ptr[stride_A + 1] * l_K_ptr[stride_K + 1];
-                    // j = 2
-                    temp_double += l_A_ptr[stride_A + 2] * l_K_ptr[stride_K + 2];
-                    // j = 3
-                    temp_double += l_A_ptr[stride_A + 3] * l_K_ptr[stride_K + 3];
-                    // j = 4
-                    temp_double += l_A_ptr[stride_A + 4] * l_K_ptr[stride_K + 4];
-                    // j = 5
-                    temp_double += l_A_ptr[stride_A + 5] * l_K_ptr[stride_K + 5];
-                    // j = 6
-                    temp_double += l_A_ptr[stride_A + 6] * l_K_ptr[stride_K + 6];
-                    // j = 7
-                    temp_double += l_A_ptr[stride_A + 7] * l_K_ptr[stride_K + 7];
-                    // j = 8
-                    temp_double += l_A_ptr[stride_A + 8] * l_K_ptr[stride_K + 8];
-                    // j = 9
-                    temp_double += l_A_ptr[stride_A + 9] * l_K_ptr[stride_K + 9];
-                    break;
-                case(11):
-                    // Loop through (j = 0; j < s; j++)
-                    // j = 0
-                    temp_double  = l_A_ptr[stride_A]      * l_K_ptr[stride_K];
-                    // j = 1
-                    temp_double += l_A_ptr[stride_A + 1]  * l_K_ptr[stride_K + 1];
-                    // j = 2
-                    temp_double += l_A_ptr[stride_A + 2]  * l_K_ptr[stride_K + 2];
-                    // j = 3
-                    temp_double += l_A_ptr[stride_A + 3]  * l_K_ptr[stride_K + 3];
-                    // j = 4
-                    temp_double += l_A_ptr[stride_A + 4]  * l_K_ptr[stride_K + 4];
-                    // j = 5
-                    temp_double += l_A_ptr[stride_A + 5]  * l_K_ptr[stride_K + 5];
-                    // j = 6
-                    temp_double += l_A_ptr[stride_A + 6]  * l_K_ptr[stride_K + 6];
-                    // j = 7
-                    temp_double += l_A_ptr[stride_A + 7]  * l_K_ptr[stride_K + 7];
-                    // j = 8
-                    temp_double += l_A_ptr[stride_A + 8]  * l_K_ptr[stride_K + 8];
-                    // j = 9
-                    temp_double += l_A_ptr[stride_A + 9]  * l_K_ptr[stride_K + 9];
-                    // j = 10
-                    temp_double += l_A_ptr[stride_A + 10] * l_K_ptr[stride_K + 10];
-                    break;
-                [[unlikely]] default:
-                    // Resort to regular rolled loops
-                    // Initialize
-                    temp_double = 0.0;
 
-                    for (size_t j = 0; j < s; j++)
-                    {
-                        temp_double += l_A_ptr[stride_A + j] * l_K_ptr[stride_K + j];
-                    }
+                [[likely]] default:
+                    // Dot product of A and K arrays up to s
+                    temp_double = std::inner_product(l_A_ptr_s, l_A_ptr_s + s, l_K_ptr_s, 0.0);
                     break;
                 }
+
                 // Update value of y_now
                 l_y_now_ptr[y_i] = l_y_old_ptr[y_i] + (this->step * temp_double);
             }
@@ -527,53 +334,12 @@ void RKSolver::p_step_implementation() noexcept
         // Dot Product (K, B) * step
         for (size_t y_i = 0; y_i < this->num_y; y_i++)
         {
-            double temp_double;
+            
             const size_t stride_K = y_i * this->n_stages_p1;
+            const double* const l_K_ptr_yi = &l_K_ptr[stride_K];
 
-            switch (this->integration_method)
-            {
-            case(ODEMethod::RK23):
-                // RK23
-                temp_double  = l_B_ptr[0] * l_K_ptr[stride_K];
-                temp_double += l_B_ptr[1] * l_K_ptr[stride_K + 1];
-                temp_double += l_B_ptr[2] * l_K_ptr[stride_K + 2];
-                break;
-            case(ODEMethod::RK45):
-                //RK45
-                temp_double  = l_B_ptr[0] * l_K_ptr[stride_K];
-                temp_double += l_B_ptr[1] * l_K_ptr[stride_K + 1];
-                temp_double += l_B_ptr[2] * l_K_ptr[stride_K + 2];
-                temp_double += l_B_ptr[3] * l_K_ptr[stride_K + 3];
-                temp_double += l_B_ptr[4] * l_K_ptr[stride_K + 4];
-                temp_double += l_B_ptr[5] * l_K_ptr[stride_K + 5];
-                break;
-            case(ODEMethod::DOP853):
-                //DOP853
-                temp_double  = l_B_ptr[0]  * l_K_ptr[stride_K];
-                temp_double += l_B_ptr[1]  * l_K_ptr[stride_K + 1];
-                temp_double += l_B_ptr[2]  * l_K_ptr[stride_K + 2];
-                temp_double += l_B_ptr[3]  * l_K_ptr[stride_K + 3];
-                temp_double += l_B_ptr[4]  * l_K_ptr[stride_K + 4];
-                temp_double += l_B_ptr[5]  * l_K_ptr[stride_K + 5];
-                temp_double += l_B_ptr[6]  * l_K_ptr[stride_K + 6];
-                temp_double += l_B_ptr[7]  * l_K_ptr[stride_K + 7];
-                temp_double += l_B_ptr[8]  * l_K_ptr[stride_K + 8];
-                temp_double += l_B_ptr[9]  * l_K_ptr[stride_K + 9];
-                temp_double += l_B_ptr[10] * l_K_ptr[stride_K + 10];
-                temp_double += l_B_ptr[11] * l_K_ptr[stride_K + 11];
-                break;
-            [[unlikely]] default:
-                // Resort to rolled loops
-                // Initialize
-                temp_double = 0.0;
-
-                for (size_t j = 0; j < this->n_stages; j++)
-                {
-                    temp_double += l_B_ptr[j] * l_K_ptr[stride_K + j];
-                }
-                break;
-            }
             // Update y_now
+            const double temp_double = std::inner_product(l_B_ptr, l_B_ptr + this->n_stages, l_K_ptr_yi, 0.0);
             l_y_now_ptr[y_i] = l_y_old_ptr[y_i] + (this->step * temp_double);
         }
 
@@ -998,14 +764,14 @@ CyrkErrorCodes RKSolver::setup()
         this->atols_ptr = config_ptr->atols.data();
 
         // Check for too small of rtols.
-        for (size_t y_i = 0; y_i < this->num_y; y_i++)
+        for (size_t rtol_i = 0; rtol_i < num_rtols; rtol_i++)
         {
-            double temp_double = this->rtols_ptr[y_i];
+            double temp_double = this->rtols_ptr[rtol_i];
             if (temp_double < EPS_100) [[unlikely]]
             {
                 temp_double = EPS_100;
             }
-            this->rtols_ptr[y_i] = temp_double;
+            this->rtols_ptr[rtol_i] = temp_double;
         }
 
         // Update initial step size
@@ -1175,72 +941,18 @@ void DOP853::p_estimate_error() noexcept
         }
 
         const size_t stride_K = y_i * this->n_stages_p1;
+        double* const K_ptr_yi = &this->K_ptr[stride_K];
 
         // Dot product between K and E3 & E5 (sum over n_stages + 1; for DOP853 n_stages = 12
         // n = 0
-        double temp_double = this->K_ptr[stride_K];
-        double error_dot3  = this->E3_ptr[0] * temp_double;
-        double error_dot5  = this->E5_ptr[0] * temp_double;
-
-        // n = 1
-        temp_double = this->K_ptr[stride_K + 1];
-        error_dot3 += this->E3_ptr[1] * temp_double;
-        error_dot5 += this->E5_ptr[1] * temp_double;
-
-        // n = 2
-        temp_double = this->K_ptr[stride_K + 2];
-        error_dot3 += this->E3_ptr[2] * temp_double;
-        error_dot5 += this->E5_ptr[2] * temp_double;
-
-        // n = 3
-        temp_double = this->K_ptr[stride_K + 3];
-        error_dot3 += this->E3_ptr[3] * temp_double;
-        error_dot5 += this->E5_ptr[3] * temp_double;
-
-        // n = 4
-        temp_double = this->K_ptr[stride_K + 4];
-        error_dot3 += this->E3_ptr[4] * temp_double;
-        error_dot5 += this->E5_ptr[4] * temp_double;
-
-        // n = 5
-        temp_double = this->K_ptr[stride_K + 5];
-        error_dot3 += this->E3_ptr[5] * temp_double;
-        error_dot5 += this->E5_ptr[5] * temp_double;
-
-        // n = 6
-        temp_double = this->K_ptr[stride_K + 6];
-        error_dot3 += this->E3_ptr[6] * temp_double;
-        error_dot5 += this->E5_ptr[6] * temp_double;
-
-        // n = 7
-        temp_double = this->K_ptr[stride_K + 7];
-        error_dot3 += this->E3_ptr[7] * temp_double;
-        error_dot5 += this->E5_ptr[7] * temp_double;
-
-        // n = 8
-        temp_double = this->K_ptr[stride_K + 8];
-        error_dot3 += this->E3_ptr[8] * temp_double;
-        error_dot5 += this->E5_ptr[8] * temp_double;
-
-        // n = 9
-        temp_double = this->K_ptr[stride_K + 9];
-        error_dot3 += this->E3_ptr[9] * temp_double;
-        error_dot5 += this->E5_ptr[9] * temp_double;
-
-        // n = 10
-        temp_double = this->K_ptr[stride_K + 10];
-        error_dot3 += this->E3_ptr[10] * temp_double;
-        error_dot5 += this->E5_ptr[10] * temp_double;
-
-        // n = 11
-        temp_double = this->K_ptr[stride_K + 11];
-        error_dot3 += this->E3_ptr[11] * temp_double;
-        error_dot5 += this->E5_ptr[11] * temp_double;
-
-        // n = 12
-        temp_double = this->K_ptr[stride_K + 12];
-        error_dot3 += this->E3_ptr[12] * temp_double;
-        error_dot5 += this->E5_ptr[12] * temp_double;
+        double error_dot3 = this->E3_ptr[0] * K_ptr_yi[0];
+        double error_dot5 = this->E5_ptr[0] * K_ptr_yi[0];
+        for (size_t n_i = 1; n_i < this->n_stages_p1; n_i++)
+        {
+            const double temp_double = K_ptr_yi[n_i];
+            error_dot3 += this->E3_ptr[n_i] * temp_double;
+            error_dot5 += this->E5_ptr[n_i] * temp_double;
+        }
 
         // Find scale of y for error calculations
         const double scale_inv = 1.0 / (atol + std::fmax(std::fabs(this->y_old_ptr[y_i]), std::fabs(this->y_now_ptr[y_i])) * rtol);
@@ -1256,7 +968,7 @@ void DOP853::p_estimate_error() noexcept
     }
 
     // Check if errors are zero
-    if ((error_norm5 == 0.0) && (error_norm3) == 0.0)
+    if ((error_norm5 == 0.0) and (error_norm3) == 0.0)
     {
         this->error_norm = 0.0;
     }

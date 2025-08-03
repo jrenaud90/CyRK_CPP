@@ -117,7 +117,7 @@ void test_regular(
     auto t1 = std::chrono::high_resolution_clock::now();
     auto t2 = std::chrono::high_resolution_clock::now();
     int k = 0;
-    int k_max = 15;
+    int k_max = 180; // 15
     double total_runner = 0.0;
     double t_at_20;
     double y_at_20[2] = { -99.0, -99.0 };
@@ -132,14 +132,34 @@ void test_regular(
     {
         running_sum = 0.0;
 
+        size_t cheat_check = t_end; // uncomment if you want to make sure things are changing every step t_end + 100 * k;
+
         for (size_t i = 0; i < max_i; i++)
         {
 
             t1 = std::chrono::high_resolution_clock::now();
             if (use_resets)
             {
-                // TODO
                 result_ptr = result_uptr_forresets.get();
+                baseline_cysolve_ivp_noreturn(
+                    result_ptr,
+                    diffeq_func,
+                    t_start,
+                    cheat_check,
+                    y0_vec,
+                    expected_size,
+                    num_extra,
+                    std::nullopt, // args_vec
+                    100000,
+                    2000,
+                    save_dense,
+                    t_eval_vec,
+                    std::nullopt, // pre_eval_func
+                    rtols_vec,
+                    atols_vec,
+                    INF, // max_step_size
+                    0.0 // first_step_size
+                );
             }
             else
             {
@@ -167,10 +187,21 @@ void test_regular(
 
             final_size = result_ptr->size;
             msg = result_ptr->message;
-            num_interps = result_ptr->num_interpolates;
-            t_at_20 = result_ptr->time_domain_vec[4];
-            y_at_20_ptr = &result_ptr->solution[(num_y + num_extra) * 4];
-            result_ptr->call(t_at_20, y_int_at_20_ptr);
+            if (result_ptr->success)
+            {
+                num_interps = result_ptr->num_interpolates;
+                t_at_20 = result_ptr->time_domain_vec[4];
+                y_at_20_ptr = &result_ptr->solution[(num_y + num_extra) * 4];
+                result_ptr->call(t_at_20, y_int_at_20_ptr);
+            }
+            else
+            {
+                num_interps = -1;
+                t_at_20 = NULL;
+                y_at_20_ptr = nullptr;
+                y_int_at_20_ptr[0] = NULL;
+                y_int_at_20_ptr[1] = NULL;
+            }
 
             //std::cout << result->message_ptr << std::endl;
             sol_size = final_size * 2;
@@ -183,7 +214,14 @@ void test_regular(
 
         std::cout << "SIZE: " << final_size << std::endl;
         std::cout << "NUM INTERPS: " << num_interps << std::endl;
-        std::cout << "20 t = " << t_at_20 << "; y0 = " << y_at_20_ptr[0] << ", y1 = " << y_at_20_ptr[1] << std::endl;
+        if (y_at_20_ptr)
+        {
+            std::cout << "20 t = " << t_at_20 << "; y0 = " << y_at_20_ptr[0] << ", y1 = " << y_at_20_ptr[1] << std::endl;
+        }
+        else
+        {
+            std::cout << "20 t = " << t_at_20 << "; y0 = " << NULL << ", y1 = " << NULL << std::endl;
+        }
         std::cout << "DENSE INTERP:: " << "y0 = " << y_int_at_20_ptr[0] << ", y1 = " << y_int_at_20_ptr[1] << std::endl;
         std::cout << "Message: " << msg << std::endl;
         std::cout << "AVERAGE: " << running_sum / max_i << "us\n" << std::endl;
@@ -224,29 +262,62 @@ int main(){
     /* This file and its functions are just used for crude testing. It is not considered truely apart of CyRK's C++ backend. */
 
     /* Speed Runs (JPR Work Desktop):
-    * No Dense; No t_eval
-    *   755.773us; 610.87us
+    * All times in microseconds.
+    * No Dense; No t_eval; t_end = 500.0; method=RK45
+    *   Steps: 3535; t20 = 0.6101; y0 = 33.18; y1 = 14.91
+    *   Older:   755.8; 610.9
+    *   v0.13.0: 932.7; 933.7; 934.3
+    *   v0.14.0 (no resets): 934.0; 937.7
+    *   v0.14.0 (resets):    933.1; 935.3
+    *
+    * Short time step; t_end = 5.0; method=RK45
+    *   v0.14.0 (no resets): 15.9; 15.8; 15.6
+    *   v0.14.0 (resets):    13.2; 11.9; 13.1
     * 
     * With Dense; No t_eval
-    *   1089.25us; 1094.09
-    * 
+    *   Older:   1089.3; 1094.1
+    *   v0.13.0: 1812.1; 1960.9; 1847.1
+    *   v0.14.0 (no resets): 1937.7; 1906.1
+    *   v0.14.0 (resets):    1546.8; 1578.4
+    *
     * With Dense; With 2x t_eval
-    *   1246.61us; 1239.9
-    * 
+    *   Older:   1246.6; 1239.9
+    *   v0.13.0: 2496.4; 2468.3
+    *   v0.14.0 (no resets): 2626.7; 2622.0
+    *   v0.14.0 (resets):    2449.7; 2476.2
+    *
     * With Dense; With 0.5x t_eval
-    *   1135.45us; 1136.49
+    *   Older:   1135.5; 1136.5
+    *   v0.13.0: 2170.5; 2198.8
+    *   v0.14.0 (no resets): 2267.1; 2256.0
+    *   v0.14.0 (resets):    1965.9; 1995.0
     *
     * No Dense; With 0.5x t_eval
-    *   822.59us; 820.39
-    * 
+    *   Older:   822.6; 820.4
+    *   v0.13.0: 1336.3; 1303.9
+    *   v0.14.0 (no resets): 1224.0; 1220.5
+    *   v0.14.0 (resets):    1249.6; 1249.2
+    *
     * No Dense; With 2x t_eval
-    *   902.975us; 901.372
+    *   Older:   903; 901.4
+    *   v0.13.0: 1631; 1631
+    *   v0.14.0 (no resets): 1595.0; 1599.4
+    *   v0.14.0 (resets):    1577.0; 1569.4
+    *
+    * No Dense; extra on
+    *   v0.14.0 (no resets): 934.5; 939.0
+    *   v0.14.0 (resets):    940.5; 938.8
+    * 
+    * Dense On; extra on
+    *   v0.14.0 (no resets): 1961.8; 2068.4
+    *   v0.14.0 (resets):    1872.0; 1611.8
     * 
     * No Dense; With 2x t_eval; With extra on
-    *   1000.79us; 952.867; 941.13
-    * 
-    * No Dense; With 0.5x t_eval; With extra on
-    *   843.989us; 837.096
+    *   Older:   1000.79us; 952.867; 941.13
+    *   v0.13.0: broken?
+    *   v0.14.0 (no resets): 1866.6; 1877.1
+    *   v0.14.0 (resets):    1825.7; 1820.6
+    *
     */
 
     test_regular(
@@ -255,7 +326,7 @@ int main(){
         0,     // len t_eval 7070 == 2x; 1767 == 0.5x for tspan of (0, 500))
         0,     // num extra
         ODEMethod::RK45,      // Method
-        false  // use_resets
+        true  // use_resets
     );
 
     // 1333.07

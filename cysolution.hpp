@@ -69,6 +69,7 @@ public:
 protected:
     void p_expand_data_storage();
     void p_finalize();
+    CyrkErrorCodes p_build_solver();
 
 public:
     virtual ~CySolverResult();

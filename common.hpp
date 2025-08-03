@@ -8,7 +8,7 @@
 // Pre-processor constants
 static const int MESSAGE_SIZE   = 128;
 static const size_t BUFFER_SIZE = 16;
-static const size_t PRE_ALLOC_STEPS = 512;
+static const size_t PRE_ALLOC_STEPS = 256;
 static const size_t PRE_ALLOC_NUMY = 16;
 
 enum class CyrkErrorCodes : int {

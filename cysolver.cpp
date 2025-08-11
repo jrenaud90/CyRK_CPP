@@ -26,6 +26,7 @@ void Py_XDECREF(PyObject* x)
 {
 }
 
+
 /* ========================================================================= */
 /* ========================  Configurations  =============================== */
 /* ========================================================================= */
@@ -105,6 +106,24 @@ void ProblemConfig::update_properties(
     if (force_retain_solver_)  this->force_retain_solver  = *force_retain_solver_;
 }
 
+void ProblemConfig::update_properties_from_config(ProblemConfig* new_config_ptr)
+{
+    this->update_properties(
+        new_config_ptr->diffeq_ptr,
+        new_config_ptr->num_extra,
+        new_config_ptr->t_start,
+        new_config_ptr->t_end,
+        new_config_ptr->y0_vec,
+        new_config_ptr->args_vec,
+        new_config_ptr->t_eval_vec,
+        new_config_ptr->expected_size,
+        new_config_ptr->max_num_steps,
+        new_config_ptr->max_ram_MB,
+        new_config_ptr->pre_eval_func,
+        new_config_ptr->capture_dense_output,
+        new_config_ptr->force_retain_solver
+    );
+}
 
 /* ========================================================================= */
 /* =========================  Constructors  ================================ */
@@ -128,12 +147,7 @@ CySolverBase::CySolverBase(CySolverResult* storage_ptr_) :
 CySolverBase::~CySolverBase()
 {
     // Deconstruct python-related properties
-    if (this->deconstruct_python or this->cython_extension_class_instance)
-    {
-        // Decrease reference count on the cython extension class instance
-        Py_XDECREF(this->cython_extension_class_instance);
-        this->cython_extension_class_instance = nullptr;
-    }
+    this->clear_python_refs();
 
     // Clear vectors
     this->t_eval_reverse_vec.clear();
@@ -189,6 +203,15 @@ void CySolverBase::set_Q_array(double* Q_ptr)
     // Overwritten by subclasses.
 }
 
+void CySolverBase::clear_python_refs()
+{
+    if (this->cython_extension_class_instance)
+    {
+        this->cython_extension_class_instance = nullptr;
+        this->use_pysolver                    = false;
+    }
+}
+
 void CySolverBase::offload_to_temp() noexcept
 {
     /* Save "now" variables to temporary arrays so that the now array can be overwritten. */
@@ -205,6 +228,32 @@ void CySolverBase::load_back_from_temp() noexcept
     this->t_now = this->t_tmp;
 }
 
+CyrkErrorCodes CySolverBase::resize_num_y(size_t num_y_, size_t num_dy_)
+{    
+    // Setup y-vectors and pointers
+    try
+    {
+        this->y_holder_vec.resize(num_y_ * 4); // 4 is the number of subarrays held in this vector.
+        this->dy_holder_vec.resize(num_dy_ * 3); // 3 is the number of subarrays held in this vector.
+    }
+    catch (const std::bad_alloc&)
+    {
+        return CyrkErrorCodes::MEMORY_ALLOCATION_ERROR;
+    }
+    double* y_holder_ptr = this->y_holder_vec.data();
+    this->y_old_ptr      = &y_holder_ptr[0];
+    this->y_now_ptr      = &y_holder_ptr[num_y_];
+    this->y_tmp_ptr      = &y_holder_ptr[num_y_ * 2];
+    this->y_interp_ptr   = &y_holder_ptr[num_y_ * 3];
+    // Repeat for dy; dy holds num_y + num_extra values.
+    double* dy_holder_ptr = this->dy_holder_vec.data();
+    this->dy_old_ptr      = &dy_holder_ptr[0];
+    this->dy_now_ptr      = &dy_holder_ptr[num_dy_];
+    this->dy_tmp_ptr      = &dy_holder_ptr[num_dy_ * 2];
+
+    return CyrkErrorCodes::NO_ERROR;
+}
+
 CyrkErrorCodes CySolverBase::setup()
 {
     CyrkErrorCodes setup_status = CyrkErrorCodes::NO_ERROR;
@@ -214,6 +263,7 @@ CyrkErrorCodes CySolverBase::setup()
     this->setup_called    = false;
     this->error_flag      = false;
     this->user_provided_max_num_steps = false;
+    this->clear_python_refs();
 
     while (setup_status == CyrkErrorCodes::NO_ERROR)
     {
@@ -228,13 +278,18 @@ CyrkErrorCodes CySolverBase::setup()
             setup_status = CyrkErrorCodes::PROPERTY_NOT_SET;
             break;
         }
+        
+        // Setup PySolver
+        if (this->storage_ptr->config_uptr->cython_extension_class_instance and 
+            this->storage_ptr->config_uptr->py_diffeq_method)
+        {
+            this->set_cython_extension_instance(
+                this->storage_ptr->config_uptr->cython_extension_class_instance,
+                this->storage_ptr->config_uptr->py_diffeq_method
+            );
+        }
 
-        // TODO: do we reset pyhooks here?
-        // If we do reset then we need to decrement the reference count on the Cython extension class instance.
-        //this->use_pysolver = false;
-        //this->deconstruct_python = false;
-
-        // For performance reasons we will store a few parameters from the config into this object.
+        // For performance reasons we will store a few parameters from the config into this object. 
         this->num_y            = this->storage_ptr->config_uptr->num_y;
         this->num_extra        = this->storage_ptr->config_uptr->num_extra;
         this->num_dy           = this->storage_ptr->config_uptr->num_dy;
@@ -265,29 +320,11 @@ CyrkErrorCodes CySolverBase::setup()
 
         // Setup y-vectors and pointers
         this->y0_ptr = this->storage_ptr->config_uptr->y0_vec.data();
+    
         // Resize the vectors now that we know the number of ys and dys.
-        try
-        {
-            this->y_holder_vec.resize(this->num_y * 4); // 4 is the number of subarrays held in this vector.
-            this->dy_holder_vec.resize(this->num_dy * 3); // 3 is the number of subarrays held in this vector.
-        }
-        catch (const std::bad_alloc&)
-        {
-            setup_status = CyrkErrorCodes::MEMORY_ALLOCATION_ERROR;
-            break;
-        }
-        double* y_holder_ptr = this->y_holder_vec.data();
-        this->y_old_ptr      = &y_holder_ptr[0];
-        this->y_now_ptr      = &y_holder_ptr[this->num_y];
-        this->y_tmp_ptr      = &y_holder_ptr[this->num_y * 2];
-        this->y_interp_ptr   = &y_holder_ptr[this->num_y * 3];
-        // Repeat for dy; dy holds num_y + num_extra values.
-        double* dy_holder_ptr = this->dy_holder_vec.data();
-        this->dy_old_ptr      = &dy_holder_ptr[0];
-        this->dy_now_ptr      = &dy_holder_ptr[this->num_dy];
-        this->dy_tmp_ptr      = &dy_holder_ptr[this->num_dy * 2];
+        setup_status = this->resize_num_y(this->num_y, this->num_dy);
 
-        // Handle backward integration. 
+        // Handle backward integration.
         if (not this->direction_flag)
         {
             if (this->use_t_eval)
@@ -319,8 +356,16 @@ CyrkErrorCodes CySolverBase::setup()
         this->user_provided_max_num_steps = max_num_steps_output.user_provided_max_num_steps;
         this->max_num_steps = max_num_steps_output.max_num_steps;
 
-        // Bind diffeq to C++ version
-        this->diffeq = &CySolverBase::p_cy_diffeq;
+        if (this->use_pysolver)
+        {
+            // Change diffeq binding to the python version
+            this->diffeq = &CySolverBase::py_diffeq;
+        }
+        else
+        {
+            // Bind diffeq to C++ version
+            this->diffeq = &CySolverBase::p_cy_diffeq;
+        }
 
         // Some methods require additional setup before the current state is set.
         setup_status = this->p_additional_setup();
@@ -615,14 +660,7 @@ CyrkErrorCodes CySolverBase::set_cython_extension_instance(
 {
     // First check to see if a python instance has already been installed in this function
     // i.e., setup is being called multiple times.
-    if (this->cython_extension_class_instance and this->deconstruct_python)
-    {
-        // Decrease reference count on the cython extension class instance
-        Py_XDECREF(this->cython_extension_class_instance);
-        this->cython_extension_class_instance = nullptr;
-        this->deconstruct_python              = false;
-        this->use_pysolver                    = false;
-    }
+    this->clear_python_refs();
 
     // Now proceed to installing python functions.
     this->use_pysolver = true;
@@ -631,9 +669,6 @@ CyrkErrorCodes CySolverBase::set_cython_extension_instance(
         this->cython_extension_class_instance = cython_extension_class_instance;
         this->py_diffeq_method                = py_diffeq_method;
 
-        // Change diffeq binding to the python version
-        this->diffeq = &CySolverBase::py_diffeq;
-
         // Import the cython/python module (functionality provided by "pysolver_api.h")
         const int import_error = import_CyRK__cy__pysolver_cyhook();
         if (import_error) [[unlikely]]
@@ -641,11 +676,6 @@ CyrkErrorCodes CySolverBase::set_cython_extension_instance(
             this->use_pysolver = false;
             this->storage_ptr->update_status(CyrkErrorCodes::ERROR_IMPORTING_PYTHON_MODULE);
             return this->storage_ptr->status;
-        }
-        else
-        {
-            Py_XINCREF(this->cython_extension_class_instance);
-            this->deconstruct_python = true;
         }
     }
     return this->storage_ptr->status;

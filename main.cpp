@@ -86,7 +86,7 @@ void test_regular(
     }
 
     double t_start = 0.0;
-    int max_i = 1000;
+    int max_i = 3000;
 
     std::vector<double> y0_vec = std::vector<double>(2);
     y0_vec[0] = 20.0; // Initial condition for y0
@@ -277,6 +277,10 @@ int main(){
     *   v0.13.0: 932.7; 933.7; 934.3
     *   v0.14.0 (no resets): 373; 372.2
     *   v0.14.0 (resets):    375.4; 372.95
+    * 
+    * No Dense; No t_eval; t_end = 500.0; method=DOP853
+    *   Steps: 1236; t20 = 1.866; y0 = 96.679; y1 = 18.98
+    *   v0.14.0 (resets):    284.7; 284.914
     *
     * Short time step; t_end = 5.0; method=RK45
     *   v0.14.0 (no resets): 6.1; 6.1; 5.7
@@ -333,8 +337,8 @@ int main(){
         false, // Dense
         0,     // len t_eval 7070 == 2x; 1767 == 0.5x for tspan of (0, 500))
         0,     // num extra
-        ODEMethod::RK45,      // Method
-        false  // use_resets
+        ODEMethod::DOP853,      // Method
+        true  // use_resets
     );
 
     // 1333.07

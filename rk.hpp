@@ -83,7 +83,7 @@ protected:
     double* K_ptr            = nullptr;
 
     // K is not const. Its values are stored in an array that is held by this class.
-    std::vector<double> K = std::vector<double>(PRE_ALLOC_NUMY * 7);
+    alignas(64) std::vector<double> K = std::vector<double>(PRE_ALLOC_NUMY * 7);
 
     // Step size parameters
     double user_provided_first_step_size = 0.0;

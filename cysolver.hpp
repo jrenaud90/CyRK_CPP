@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
-#include <optional>
 
 #include "common.hpp"
 #include "cy_array.hpp"
@@ -20,8 +19,8 @@ typedef DiffeqFuncType DiffeqMethod;
 // Read more about how C++ can call python functions here:
 // https://stackoverflow.com/questions/10126668/can-i-override-a-c-virtual-function-within-python-with-cython
 // and here: https://github.com/dashesy/pyavfcam/blob/master/src/avf.pyx#L27
-//#include <Python.h>
-//#include "pysolver_cyhook_api.h"
+// #include <Python.h>
+// #include "pysolver_cyhook_api.h"
 
 // We need to forward declare the CySolverResult so that the solver can make calls to its methods
 class CySolverResult;
@@ -61,12 +60,12 @@ inline const std::map<ODEMethod, std::string> CyrkODEMethods = {
 
 struct ProblemConfig {
     // Required configurations
-    DiffeqFuncType diffeq_ptr;   // Pointer to the differential equation function
-    double t_start;              // Start time of the integration
-    double t_end;                // End time of the integration
+    DiffeqFuncType diffeq_ptr      = nullptr;  // Pointer to the differential equation function
+    double t_start                 = 0.0;      // Start time of the integration
+    double t_end                   = 0.0;      // End time of the integration
     std::vector<double> y0_vec     = std::vector<double>(PRE_ALLOC_NUMY);  // Initial conditions for the dependent variables
 
-    // Optional configurations
+    // Baseline configurations
     std::vector<char> args_vec     = std::vector<char>(0);    // Additional arguments for the solver
     std::vector<double> t_eval_vec = std::vector<double>(0);  // User-provided time evaluation points
     size_t num_extra               = 0;                       // Number of extra variables (if any)
@@ -90,6 +89,9 @@ struct ProblemConfig {
     PyObject* cython_extension_class_instance = nullptr;  // Pointer to Python instance which holds the diffeq.
     DiffeqMethod py_diffeq_method             = nullptr;  // Said python diffeq.
 
+    // Flags
+    bool initialized = false;
+
     // Solver specific configurations can be added below via overloading the class.
 
     // Constructors
@@ -99,24 +101,44 @@ struct ProblemConfig {
         double t_start_,
         double t_end_,
         std::vector<double>& y0_vec_);
+    ProblemConfig(
+        DiffeqFuncType diffeq_ptr_,
+        double t_start_,
+        double t_end_,
+        std::vector<double>& y0_vec_,
+        std::vector<char>& args_vec_,
+        std::vector<double>& t_eval_vec_,
+        size_t num_extra_,
+        size_t expected_size_,
+        size_t max_num_steps_,
+        size_t max_ram_MB_,
+        PreEvalFunc pre_eval_func_,
+        bool capture_dense_output_,
+        bool force_retain_solver_);
 
-    // Other setups
-    void update_y0(std::vector<double>& y0_vec_);
+    // Helper functions
     void update_properties(
-        std::optional<DiffeqFuncType> diffeq_ptr_      = std::nullopt,
-        std::optional<size_t> num_extra_               = std::nullopt,
-        std::optional<double> t_start_                 = std::nullopt,
-        std::optional<double> t_end_                   = std::nullopt,
-        std::optional<std::vector<double>> y0_vec_     = std::nullopt,
-        std::optional<std::vector<char>> args_vec_     = std::nullopt,
-        std::optional<std::vector<double>> t_eval_vec_ = std::nullopt,
-        std::optional<size_t> expected_size_           = std::nullopt,
-        std::optional<size_t> max_num_steps_           = std::nullopt,
-        std::optional<size_t> max_ram_MB_              = std::nullopt,
-        std::optional<PreEvalFunc> pre_eval_func_      = std::nullopt,
-        std::optional<bool> capture_dense_output_      = std::nullopt,
-        std::optional<bool> force_retain_solver_       = std::nullopt
+        DiffeqFuncType diffeq_ptr_,
+        double t_start_,
+        double t_end_,
+        std::vector<double>& y0_vec_
     );
+    void update_properties(
+        DiffeqFuncType diffeq_ptr_,
+        double t_start_,
+        double t_end_,
+        std::vector<double>& y0_vec_,
+        std::vector<char>& args_vec_,
+        std::vector<double>& t_eval_vec_,
+        size_t num_extra_,
+        size_t expected_size_,
+        size_t max_num_steps_,
+        size_t max_ram_MB_,
+        PreEvalFunc pre_eval_func_,
+        bool capture_dense_output_,
+        bool force_retain_solver_
+    );
+    virtual void initialize();
     virtual void update_properties_from_config(ProblemConfig* new_config_ptr);
 };
 

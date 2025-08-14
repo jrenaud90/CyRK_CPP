@@ -3,6 +3,7 @@
 #include <fstream>
 #include <chrono>
 #include <cstring>
+#include <vector>
 
 #include <cmath>
 #include "cysolve.hpp"
@@ -108,6 +109,7 @@ void test_regular(
     size_t final_size;
     size_t sol_size;
     size_t num_interps = 0;
+    std::vector<char> args_vec = std::vector<char>(0);
 
     std::vector<double> t_eval_vec = std::vector<double>(0);
     if (len_t_eval > 0)
@@ -135,7 +137,7 @@ void test_regular(
         running_sum = 0.0;
         running_sum_ps = 0.0;
 
-        size_t cheat_check = t_end; // uncomment if you want to make sure things are changing every step t_end + 100 * k;
+        double cheat_check = t_end; // uncomment if you want to make sure things are changing every step t_end + 100 * k;
 
         for (size_t i = 0; i < max_i; i++)
         {
@@ -151,12 +153,12 @@ void test_regular(
                     y0_vec,
                     expected_size,
                     num_extra,
-                    std::nullopt, // args_vec
+                    args_vec, // args_vec
                     100000,
                     2000,
                     save_dense,
                     t_eval_vec,
-                    std::nullopt, // pre_eval_func
+                    nullptr, // pre_eval_func
                     rtols_vec,
                     atols_vec,
                     INF, // max_step_size
@@ -175,12 +177,12 @@ void test_regular(
                     method,
                     expected_size,
                     num_extra,
-                    std::nullopt,
+                    args_vec,
                     100000,
                     2000,
                     save_dense,
                     t_eval_vec,
-                    std::nullopt, // pre_eval_func
+                    nullptr, // pre_eval_func
                     rtols_vec,
                     atols_vec,
                     INF, // max_step_size
@@ -277,14 +279,17 @@ int main(){
     *   v0.13.0: 932.7; 933.7; 934.3
     *   v0.14.0 (no resets): 373; 372.2
     *   v0.14.0 (resets):    375.4; 372.95
+    *   v0.15.0 (resets):    372.6; 371.6
     * 
     * No Dense; No t_eval; t_end = 500.0; method=DOP853
     *   Steps: 1236; t20 = 1.866; y0 = 96.679; y1 = 18.98
     *   v0.14.0 (resets):    284.7; 284.914
+    *   v0.15.0 (resets):    281.9; 282.7
     *
     * Short time step; t_end = 5.0; method=RK45
     *   v0.14.0 (no resets): 6.1; 6.1; 5.7
     *   v0.14.0 (resets):    4.87; 5.01; 4.95
+    *   v0.15.0 (resets):    4.75; 4.59; 4.66
     * 
     * With Dense; No t_eval
     *   Older:   1089.3; 1094.1
@@ -333,11 +338,11 @@ int main(){
     */
 
     test_regular(
-        500.0, // t_end
+        5.0, // t_end
         false, // Dense
         0,     // len t_eval 7070 == 2x; 1767 == 0.5x for tspan of (0, 500))
         0,     // num extra
-        ODEMethod::DOP853,      // Method
+        ODEMethod::RK45,      // Method
         true  // use_resets
     );
 

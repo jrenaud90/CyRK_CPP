@@ -302,6 +302,7 @@ int main(){
     *   v0.13.0: 2496.4; 2468.3
     *   v0.14.0 (no resets): 2626.7; 2622.0
     *   v0.14.0 (resets):    2449.7; 2476.2
+    * 
     *
     * With Dense; With 0.5x t_eval
     *   Older:   1135.5; 1136.5

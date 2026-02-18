@@ -9,6 +9,11 @@
                 "NPY_1_9_API_VERSION"
             ]
         ],
+        "depends": [
+            "CyRK\\cy\\c_common.cpp",
+            "CyRK\\cy\\c_events.cpp",
+            "CyRK\\optimize\\c_brentq.cpp"
+        ],
         "extra_compile_args": [
             "/openmp",
             "/std:c++20"
@@ -16,22 +21,22 @@
         "include_dirs": [
             "CyRK\\cy",
             "CyRK\\optimize",
-            "C:\\Users\\joepr\\AppData\\Local\\Temp\\pip-build-env-bhswy62o\\overlay\\Lib\\site-packages\\numpy\\_core\\include",
-            "C:\\Users\\joepr\\AppData\\Local\\Temp\\pip-build-env-bhswy62o\\site",
+            "C:\\Users\\joepr\\AppData\\Local\\Temp\\pip-build-env-qi8440qx\\overlay\\Lib\\site-packages\\numpy\\_core\\include",
+            "C:\\Users\\joepr\\AppData\\Local\\Temp\\pip-build-env-qi8440qx\\site",
             "C:\\Users\\joepr\\miniforge3\\envs\\cyrk313\\python313.zip",
             "C:\\Users\\joepr\\miniforge3\\envs\\cyrk313\\DLLs",
             "C:\\Users\\joepr\\miniforge3\\envs\\cyrk313\\Lib",
-            "C:\\Users\\joepr\\AppData\\Local\\Temp\\pip-build-env-bhswy62o\\overlay\\Lib\\site-packages",
-            "C:\\Users\\joepr\\AppData\\Local\\Temp\\pip-build-env-bhswy62o\\normal\\Lib\\site-packages",
-            "C:\\Users\\joepr\\AppData\\Local\\Temp\\pip-build-env-bhswy62o\\overlay\\Lib\\site-packages\\setuptools\\_vendor"
+            "C:\\Users\\joepr\\AppData\\Local\\Temp\\pip-build-env-qi8440qx\\overlay\\Lib\\site-packages",
+            "C:\\Users\\joepr\\AppData\\Local\\Temp\\pip-build-env-qi8440qx\\normal\\Lib\\site-packages",
+            "C:\\Users\\joepr\\AppData\\Local\\Temp\\pip-build-env-qi8440qx\\overlay\\Lib\\site-packages\\setuptools\\_vendor"
         ],
         "language": "c++",
-        "name": "CyRK.cy.pysolver_cyhook",
+        "name": "CyRK.cy.events",
         "sources": [
-            "CyRK\\cy\\pysolver_cyhook.pyx"
+            "CyRK\\cy\\events.pyx"
         ]
     },
-    "module_name": "CyRK.cy.pysolver_cyhook"
+    "module_name": "CyRK.cy.events"
 }
 END: Cython Metadata */
 
@@ -1161,9 +1166,35 @@ static int __Pyx_init_co_variables(void) {
     #define __PYX_EXTERN_C extern "C++"
 #endif
 
-#define __PYX_HAVE__CyRK__cy__pysolver_cyhook
-#define __PYX_HAVE_API__CyRK__cy__pysolver_cyhook
+#define __PYX_HAVE__CyRK__cy__events
+#define __PYX_HAVE_API__CyRK__cy__events
 /* Early includes */
+#include "ios"
+#include "new"
+#include "stdexcept"
+#include "typeinfo"
+#include <vector>
+#include <string.h>
+#include <stdio.h>
+#include <string_view>
+#include <string>
+#include <utility>
+
+    #if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1600)
+    // move should be defined for these versions of MSVC, but __cplusplus isn't set usefully
+    #include <type_traits>
+
+    namespace cython_std {
+    template <typename T> typename std::remove_reference<T>::type&& move(T& t) noexcept { return std::move(t); }
+    template <typename T> typename std::remove_reference<T>::type&& move(T&& t) noexcept { return std::move(t); }
+    }
+
+    #endif
+    
+#include <map>
+#include "c_common.cpp"
+#include "c_brentq.cpp"
+#include "c_events.cpp"
 #ifdef _OPENMP
 #include <omp.h>
 #endif /* _OPENMP */
@@ -1380,7 +1411,8 @@ static const char *__pyx_filename;
 /* #### Code section: filename_table ### */
 
 static const char* const __pyx_f[] = {
-  "CyRK/cy/pysolver_cyhook.pyx",
+  "CyRK/cy/events.pyx",
+  "cpython/type.pxd",
 };
 /* #### Code section: utility_code_proto_before_types ### */
 /* Atomics.proto (used by CodeObjectCache) */
@@ -1520,6 +1552,17 @@ static const char* const __pyx_f[] = {
     #endif
 #endif
 
+/* EnumClassDecl.proto */
+#if defined (_MSC_VER)
+  #if _MSC_VER >= 1910
+    #define __PYX_ENUM_CLASS_DECL enum
+  #else
+    #define __PYX_ENUM_CLASS_DECL
+  #endif
+#else
+  #define __PYX_ENUM_CLASS_DECL enum
+#endif
+
 /* #### Code section: numeric_typedefs ### */
 /* #### Code section: complex_type_declarations ### */
 /* #### Code section: type_declarations ### */
@@ -1615,14 +1658,24 @@ typedef double (*PyEventMethod)(PyObject *, size_t, double, double *);
 #define __Pyx_CLEAR(r)    do { PyObject* tmp = ((PyObject*)(r)); r = NULL; __Pyx_DECREF(tmp);} while(0)
 #define __Pyx_XCLEAR(r)   do { if((r) != NULL) {PyObject* tmp = ((PyObject*)(r)); r = NULL; __Pyx_DECREF(tmp);}} while(0)
 
-/* FunctionExport.proto */
-static int __Pyx_ExportFunction(PyObject *api_dict, const char *name, void (*f)(void), const char *sig);
-
-/* GetApiDict.proto */
-static PyObject *__Pyx_ApiExport_GetApiDict(void);
-
-/* IncludeStringH.proto */
-#include <string.h>
+/* TypeImport.proto */
+#ifndef __PYX_HAVE_RT_ImportType_proto_3_2_4
+#define __PYX_HAVE_RT_ImportType_proto_3_2_4
+#if defined (__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#include <stdalign.h>
+#endif
+#if (defined (__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) || __cplusplus >= 201103L
+#define __PYX_GET_STRUCT_ALIGNMENT_3_2_4(s) alignof(s)
+#else
+#define __PYX_GET_STRUCT_ALIGNMENT_3_2_4(s) sizeof(void*)
+#endif
+enum __Pyx_ImportType_CheckSize_3_2_4 {
+   __Pyx_ImportType_CheckSize_Error_3_2_4 = 0,
+   __Pyx_ImportType_CheckSize_Warn_3_2_4 = 1,
+   __Pyx_ImportType_CheckSize_Ignore_3_2_4 = 2
+};
+static PyTypeObject *__Pyx_ImportType_3_2_4(PyObject* module, const char *module_name, const char *class_name, size_t size, size_t alignment, enum __Pyx_ImportType_CheckSize_3_2_4 check_size);
+#endif
 
 /* dict_setdefault.proto (used by CLineInTraceback) */
 static CYTHON_INLINE PyObject *__Pyx_PyDict_SetDefault(PyObject *d, PyObject *key, PyObject *default_value);
@@ -1907,16 +1960,44 @@ static int __Pyx_State_RemoveModule(void*);
 #define __PYX_TYPE_MODULE_PREFIX __PYX_ABI_MODULE_NAME "."
 
 
+/* Module declarations from "libcpp" */
+
+/* Module declarations from "libcpp.vector" */
+
+/* Module declarations from "libc.string" */
+
+/* Module declarations from "libc.stdio" */
+
+/* Module declarations from "__builtin__" */
+
+/* Module declarations from "cpython.type" */
+
+/* Module declarations from "cpython" */
+
+/* Module declarations from "cpython.object" */
+
+/* Module declarations from "cpython.ref" */
+
+/* Module declarations from "libcpp.string_view" */
+
+/* Module declarations from "libcpp.string" */
+
+/* Module declarations from "libcpp.utility" */
+
+/* Module declarations from "libcpp.map" */
+
+/* Module declarations from "CyRK.cy.common" */
+
 /* Module declarations from "CyRK.cy.pysolver_cyhook" */
-__PYX_EXTERN_C void call_diffeq_from_cython(PyObject *, DiffeqMethod); /*proto*/
-__PYX_EXTERN_C double call_pyevent_from_cython(PyObject *, PyEventMethod, size_t, double, double *); /*proto*/
+
+/* Module declarations from "CyRK.cy.events" */
 /* #### Code section: typeinfo ### */
 /* #### Code section: before_global_var ### */
-#define __Pyx_MODULE_NAME "CyRK.cy.pysolver_cyhook"
-extern int __pyx_module_is_main_CyRK__cy__pysolver_cyhook;
-int __pyx_module_is_main_CyRK__cy__pysolver_cyhook = 0;
+#define __Pyx_MODULE_NAME "CyRK.cy.events"
+extern int __pyx_module_is_main_CyRK__cy__events;
+int __pyx_module_is_main_CyRK__cy__events = 0;
 
-/* Implementation of "CyRK.cy.pysolver_cyhook" */
+/* Implementation of "CyRK.cy.events" */
 /* #### Code section: global_var ### */
 /* #### Code section: string_decls ### */
 /* #### Code section: decls ### */
@@ -1940,7 +2021,8 @@ typedef struct {
   PyObject *__pyx_empty_tuple;
   PyObject *__pyx_empty_bytes;
   PyObject *__pyx_empty_unicode;
-  PyObject *__pyx_string_tab[10];
+  PyTypeObject *__pyx_ptype_7cpython_4type_type;
+  PyObject *__pyx_string_tab[8];
 /* #### Code section: module_state_contents ### */
 /* CodeObjectCache.module_state_decls */
 struct __Pyx_CodeObjectCache __pyx_code_cache;
@@ -1975,11 +2057,9 @@ static __pyx_mstatetype * const __pyx_mstate_global = &__pyx_mstate_global_stati
 #define __pyx_n_u_main __pyx_string_tab[2]
 #define __pyx_n_u_module __pyx_string_tab[3]
 #define __pyx_n_u_name __pyx_string_tab[4]
-#define __pyx_n_u_pyx_capi __pyx_string_tab[5]
-#define __pyx_n_u_qualname __pyx_string_tab[6]
-#define __pyx_n_u_setdefault __pyx_string_tab[7]
-#define __pyx_n_u_test __pyx_string_tab[8]
-#define __pyx_kp_b_double_PyObject_PyEventMethod_si __pyx_string_tab[9]
+#define __pyx_n_u_qualname __pyx_string_tab[5]
+#define __pyx_n_u_setdefault __pyx_string_tab[6]
+#define __pyx_n_u_test __pyx_string_tab[7]
 /* #### Code section: module_state_clear ### */
 #if CYTHON_USE_MODULE_STATE
 static CYTHON_SMALL_CODE int __pyx_m_clear(PyObject *m) {
@@ -1994,7 +2074,8 @@ static CYTHON_SMALL_CODE int __pyx_m_clear(PyObject *m) {
   #if CYTHON_PEP489_MULTI_PHASE_INIT
   __Pyx_State_RemoveModule(NULL);
   #endif
-  for (int i=0; i<10; ++i) { Py_CLEAR(clear_module_state->__pyx_string_tab[i]); }
+  Py_CLEAR(clear_module_state->__pyx_ptype_7cpython_4type_type);
+  for (int i=0; i<8; ++i) { Py_CLEAR(clear_module_state->__pyx_string_tab[i]); }
 /* #### Code section: module_state_clear_contents ### */
 /* #### Code section: module_state_clear_end ### */
 return 0;
@@ -2011,75 +2092,14 @@ static CYTHON_SMALL_CODE int __pyx_m_traverse(PyObject *m, visitproc visit, void
   __Pyx_VISIT_CONST(traverse_module_state->__pyx_empty_tuple);
   __Pyx_VISIT_CONST(traverse_module_state->__pyx_empty_bytes);
   __Pyx_VISIT_CONST(traverse_module_state->__pyx_empty_unicode);
-  for (int i=0; i<10; ++i) { __Pyx_VISIT_CONST(traverse_module_state->__pyx_string_tab[i]); }
+  Py_VISIT(traverse_module_state->__pyx_ptype_7cpython_4type_type);
+  for (int i=0; i<8; ++i) { __Pyx_VISIT_CONST(traverse_module_state->__pyx_string_tab[i]); }
 /* #### Code section: module_state_traverse_contents ### */
 /* #### Code section: module_state_traverse_end ### */
 return 0;
 }
 #endif
 /* #### Code section: module_code ### */
-
-/* "CyRK/cy/pysolver_cyhook.pyx":6
- * # The "public api" prefix tells Cython to produce header files "pysolver_api.h" which can be included in C++ files.
- * 
- * cdef public api void call_diffeq_from_cython(object py_instance, DiffeqMethod diffeq):             # <<<<<<<<<<<<<<
- *     """Callback function used by the C++ model to call user-provided python diffeq functions.
- *     """
-*/
-
-void call_diffeq_from_cython(PyObject *__pyx_v_py_instance, DiffeqMethod __pyx_v_diffeq) {
-
-  /* "CyRK/cy/pysolver_cyhook.pyx":11
- * 
- *     # Call the python diffeq.
- *     diffeq(py_instance)             # <<<<<<<<<<<<<<
- * 
- * cdef public api double call_pyevent_from_cython(object py_instance, PyEventMethod pyevent_method, size_t event_index, double t, double* y_ptr):
-*/
-  __pyx_v_diffeq(__pyx_v_py_instance);
-
-  /* "CyRK/cy/pysolver_cyhook.pyx":6
- * # The "public api" prefix tells Cython to produce header files "pysolver_api.h" which can be included in C++ files.
- * 
- * cdef public api void call_diffeq_from_cython(object py_instance, DiffeqMethod diffeq):             # <<<<<<<<<<<<<<
- *     """Callback function used by the C++ model to call user-provided python diffeq functions.
- *     """
-*/
-
-  /* function exit code */
-}
-
-/* "CyRK/cy/pysolver_cyhook.pyx":13
- *     diffeq(py_instance)
- * 
- * cdef public api double call_pyevent_from_cython(object py_instance, PyEventMethod pyevent_method, size_t event_index, double t, double* y_ptr):             # <<<<<<<<<<<<<<
- *     """Callback function used by the C++ model to call user-provided python event functions.
- *     """
-*/
-
-double call_pyevent_from_cython(PyObject *__pyx_v_py_instance, PyEventMethod __pyx_v_pyevent_method, size_t __pyx_v_event_index, double __pyx_v_t, double *__pyx_v_y_ptr) {
-  double __pyx_r;
-
-  /* "CyRK/cy/pysolver_cyhook.pyx":18
- * 
- *     # Call the python pyevent function.
- *     return pyevent_method(py_instance, event_index, t, y_ptr)             # <<<<<<<<<<<<<<
-*/
-  __pyx_r = __pyx_v_pyevent_method(__pyx_v_py_instance, __pyx_v_event_index, __pyx_v_t, __pyx_v_y_ptr);
-  goto __pyx_L0;
-
-  /* "CyRK/cy/pysolver_cyhook.pyx":13
- *     diffeq(py_instance)
- * 
- * cdef public api double call_pyevent_from_cython(object py_instance, PyEventMethod pyevent_method, size_t event_index, double t, double* y_ptr):             # <<<<<<<<<<<<<<
- *     """Callback function used by the C++ model to call user-provided python event functions.
- *     """
-*/
-
-  /* function exit code */
-  __pyx_L0:;
-  return __pyx_r;
-}
 /* #### Code section: module_exttypes ### */
 
 static PyMethodDef __pyx_methods[] = {
@@ -2121,38 +2141,10 @@ static int __Pyx_modinit_variable_export_code(__pyx_mstatetype *__pyx_mstate) {
 static int __Pyx_modinit_function_export_code(__pyx_mstatetype *__pyx_mstate) {
   __Pyx_RefNannyDeclarations
   CYTHON_UNUSED_VAR(__pyx_mstate);
-  PyObject *__pyx_t_1 = NULL;
-  int __pyx_lineno = 0;
-  const char *__pyx_filename = NULL;
-  int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__Pyx_modinit_function_export_code", 0);
   /*--- Function export code ---*/
-  {
-    __pyx_t_1 = __Pyx_ApiExport_GetApiDict(); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
-    const char * __pyx_export_signature = __Pyx_PyBytes_AsString(__pyx_mstate_global->__pyx_kp_b_double_PyObject_PyEventMethod_si);
-    #if !CYTHON_ASSUME_SAFE_MACROS
-    if (unlikely(!__pyx_export_signature)) __PYX_ERR(0, 1, __pyx_L1_error)
-    #endif
-    const char * __pyx_export_name = __pyx_export_signature + 93;
-    void (*const __pyx_export_pointers[])(void) = {(void (*)(void))&call_pyevent_from_cython, (void (*)(void))&call_diffeq_from_cython, (void (*)(void)) NULL};
-    void (*const *__pyx_export_pointer)(void) = __pyx_export_pointers;
-    const char *__pyx_export_current_signature = __pyx_export_signature;
-    while (*__pyx_export_pointer) {
-      if (__Pyx_ExportFunction(__pyx_t_1, __pyx_export_name, *__pyx_export_pointer, __pyx_export_current_signature) < (0)) __PYX_ERR(0, 1, __pyx_L1_error)
-      ++__pyx_export_pointer;
-      __pyx_export_name = strchr(__pyx_export_name, '\0') + 1;
-      __pyx_export_signature = strchr(__pyx_export_signature, '\0') + 1;
-      if (*__pyx_export_signature != '\0') __pyx_export_current_signature = __pyx_export_signature;
-    }
-    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  }
   __Pyx_RefNannyFinishContext();
   return 0;
-  __pyx_L1_error:;
-  __Pyx_XDECREF(__pyx_t_1);
-  __Pyx_RefNannyFinishContext();
-  return -1;
 }
 
 static int __Pyx_modinit_type_init_code(__pyx_mstatetype *__pyx_mstate) {
@@ -2167,10 +2159,30 @@ static int __Pyx_modinit_type_init_code(__pyx_mstatetype *__pyx_mstate) {
 static int __Pyx_modinit_type_import_code(__pyx_mstatetype *__pyx_mstate) {
   __Pyx_RefNannyDeclarations
   CYTHON_UNUSED_VAR(__pyx_mstate);
+  PyObject *__pyx_t_1 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__Pyx_modinit_type_import_code", 0);
   /*--- Type import code ---*/
+  __pyx_t_1 = PyImport_ImportModule(__Pyx_BUILTIN_MODULE_NAME); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 9, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_mstate->__pyx_ptype_7cpython_4type_type = __Pyx_ImportType_3_2_4(__pyx_t_1, __Pyx_BUILTIN_MODULE_NAME, "type",
+  #if defined(PYPY_VERSION_NUM) && PYPY_VERSION_NUM < 0x050B0000
+  sizeof(PyTypeObject), __PYX_GET_STRUCT_ALIGNMENT_3_2_4(PyTypeObject),
+  #elif CYTHON_COMPILING_IN_LIMITED_API
+  0, 0,
+  #else
+  sizeof(PyHeapTypeObject), __PYX_GET_STRUCT_ALIGNMENT_3_2_4(PyHeapTypeObject),
+  #endif
+  __Pyx_ImportType_CheckSize_Warn_3_2_4); if (!__pyx_mstate->__pyx_ptype_7cpython_4type_type) __PYX_ERR(1, 9, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_RefNannyFinishContext();
   return 0;
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_RefNannyFinishContext();
+  return -1;
 }
 
 static int __Pyx_modinit_variable_import_code(__pyx_mstatetype *__pyx_mstate) {
@@ -2193,10 +2205,10 @@ static int __Pyx_modinit_function_import_code(__pyx_mstatetype *__pyx_mstate) {
 
 #if CYTHON_PEP489_MULTI_PHASE_INIT
 static PyObject* __pyx_pymod_create(PyObject *spec, PyModuleDef *def); /*proto*/
-static int __pyx_pymod_exec_pysolver_cyhook(PyObject* module); /*proto*/
+static int __pyx_pymod_exec_events(PyObject* module); /*proto*/
 static PyModuleDef_Slot __pyx_moduledef_slots[] = {
   {Py_mod_create, (void*)__pyx_pymod_create},
-  {Py_mod_exec, (void*)__pyx_pymod_exec_pysolver_cyhook},
+  {Py_mod_exec, (void*)__pyx_pymod_exec_events},
   #if CYTHON_COMPILING_IN_CPYTHON_FREETHREADING
   {Py_mod_gil, __Pyx_FREETHREADING_COMPATIBLE},
   #endif
@@ -2215,7 +2227,7 @@ namespace {
   #endif
   {
       PyModuleDef_HEAD_INIT,
-      "pysolver_cyhook",
+      "events",
       0, /* m_doc */
     #if CYTHON_USE_MODULE_STATE
       sizeof(__pyx_mstatetype), /* m_size */
@@ -2253,8 +2265,8 @@ namespace {
   #endif
 #endif
 
-__Pyx_PyMODINIT_FUNC PyInit_pysolver_cyhook(void) CYTHON_SMALL_CODE; /*proto*/
-__Pyx_PyMODINIT_FUNC PyInit_pysolver_cyhook(void)
+__Pyx_PyMODINIT_FUNC PyInit_events(void) CYTHON_SMALL_CODE; /*proto*/
+__Pyx_PyMODINIT_FUNC PyInit_events(void)
 #if CYTHON_PEP489_MULTI_PHASE_INIT
 {
   return PyModuleDef_Init(&__pyx_moduledef);
@@ -2361,7 +2373,7 @@ bad:
 }
 
 
-static CYTHON_SMALL_CODE int __pyx_pymod_exec_pysolver_cyhook(PyObject *__pyx_pyinit_module)
+static CYTHON_SMALL_CODE int __pyx_pymod_exec_events(PyObject *__pyx_pyinit_module)
 #endif
 {
   int stringtab_initialized = 0;
@@ -2378,7 +2390,7 @@ static CYTHON_SMALL_CODE int __pyx_pymod_exec_pysolver_cyhook(PyObject *__pyx_py
   #if CYTHON_PEP489_MULTI_PHASE_INIT
   if (__pyx_m) {
     if (__pyx_m == __pyx_pyinit_module) return 0;
-    PyErr_SetString(PyExc_RuntimeError, "Module 'pysolver_cyhook' has already been imported. Re-initialisation is not supported.");
+    PyErr_SetString(PyExc_RuntimeError, "Module 'events' has already been imported. Re-initialisation is not supported.");
     return -1;
   }
   #else
@@ -2394,7 +2406,7 @@ static CYTHON_SMALL_CODE int __pyx_pymod_exec_pysolver_cyhook(PyObject *__pyx_py
   #if CYTHON_USE_MODULE_STATE
   {
     int add_module_result = __Pyx_State_AddModule(__pyx_t_1, &__pyx_moduledef);
-    __pyx_t_1 = 0; /* transfer ownership from __pyx_t_1 to "pysolver_cyhook" pseudovariable */
+    __pyx_t_1 = 0; /* transfer ownership from __pyx_t_1 to "events" pseudovariable */
     if (unlikely((add_module_result < 0))) __PYX_ERR(0, 1, __pyx_L1_error)
     pystate_addmodule_run = 1;
   }
@@ -2422,7 +2434,7 @@ static CYTHON_SMALL_CODE int __pyx_pymod_exec_pysolver_cyhook(PyObject *__pyx_py
   }
   #endif
   
-__Pyx_RefNannySetupContext("PyInit_pysolver_cyhook", 0);
+__Pyx_RefNannySetupContext("PyInit_events", 0);
   __Pyx_init_runtime_version();
   if (__Pyx_check_binary_version(__PYX_LIMITED_VERSION_HEX, __Pyx_get_runtime_version(), CYTHON_COMPILING_IN_LIMITED_API) < (0)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_mstate->__pyx_empty_tuple = PyTuple_New(0); if (unlikely(!__pyx_mstate->__pyx_empty_tuple)) __PYX_ERR(0, 1, __pyx_L1_error)
@@ -2433,13 +2445,13 @@ __Pyx_RefNannySetupContext("PyInit_pysolver_cyhook", 0);
   if (__Pyx_InitConstants(__pyx_mstate) < (0)) __PYX_ERR(0, 1, __pyx_L1_error)
   stringtab_initialized = 1;
   if (__Pyx_InitGlobals() < (0)) __PYX_ERR(0, 1, __pyx_L1_error)
-  if (__pyx_module_is_main_CyRK__cy__pysolver_cyhook) {
+  if (__pyx_module_is_main_CyRK__cy__events) {
     if (PyObject_SetAttr(__pyx_m, __pyx_mstate_global->__pyx_n_u_name, __pyx_mstate_global->__pyx_n_u_main) < (0)) __PYX_ERR(0, 1, __pyx_L1_error)
   }
   {
     PyObject *modules = PyImport_GetModuleDict(); if (unlikely(!modules)) __PYX_ERR(0, 1, __pyx_L1_error)
-    if (!PyDict_GetItemString(modules, "CyRK.cy.pysolver_cyhook")) {
-      if (unlikely((PyDict_SetItemString(modules, "CyRK.cy.pysolver_cyhook", __pyx_m) < 0))) __PYX_ERR(0, 1, __pyx_L1_error)
+    if (!PyDict_GetItemString(modules, "CyRK.cy.events")) {
+      if (unlikely((PyDict_SetItemString(modules, "CyRK.cy.events", __pyx_m) < 0))) __PYX_ERR(0, 1, __pyx_L1_error)
     }
   }
   /*--- Builtin init code ---*/
@@ -2450,17 +2462,16 @@ __Pyx_RefNannySetupContext("PyInit_pysolver_cyhook", 0);
   /*--- Global type/function init code ---*/
   (void)__Pyx_modinit_global_init_code(__pyx_mstate);
   (void)__Pyx_modinit_variable_export_code(__pyx_mstate);
-  if (unlikely((__Pyx_modinit_function_export_code(__pyx_mstate) < 0))) __PYX_ERR(0, 1, __pyx_L1_error)
+  (void)__Pyx_modinit_function_export_code(__pyx_mstate);
   (void)__Pyx_modinit_type_init_code(__pyx_mstate);
-  (void)__Pyx_modinit_type_import_code(__pyx_mstate);
+  if (unlikely((__Pyx_modinit_type_import_code(__pyx_mstate) < 0))) __PYX_ERR(0, 1, __pyx_L1_error)
   (void)__Pyx_modinit_variable_import_code(__pyx_mstate);
   (void)__Pyx_modinit_function_import_code(__pyx_mstate);
   /*--- Execution code ---*/
 
-  /* "CyRK/cy/pysolver_cyhook.pyx":1
+  /* "CyRK/cy/events.pyx":1
  * # distutils: language = c++             # <<<<<<<<<<<<<<
  * # cython: boundscheck=False, wraparound=False, nonecheck=False, cdivision=True, initializedcheck=False
- * 
 */
   __pyx_t_2 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 1, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
@@ -2474,7 +2485,7 @@ __Pyx_RefNannySetupContext("PyInit_pysolver_cyhook", 0);
   __Pyx_XDECREF(__pyx_t_2);
   if (__pyx_m) {
     if (__pyx_mstate->__pyx_d && stringtab_initialized) {
-      __Pyx_AddTraceback("init CyRK.cy.pysolver_cyhook", __pyx_clineno, __pyx_lineno, __pyx_filename);
+      __Pyx_AddTraceback("init CyRK.cy.events", __pyx_clineno, __pyx_lineno, __pyx_filename);
     }
     #if !CYTHON_USE_MODULE_STATE
     Py_CLEAR(__pyx_m);
@@ -2488,7 +2499,7 @@ __Pyx_RefNannySetupContext("PyInit_pysolver_cyhook", 0);
     }
     #endif
   } else if (!PyErr_Occurred()) {
-    PyErr_SetString(PyExc_ImportError, "init CyRK.cy.pysolver_cyhook");
+    PyErr_SetString(PyExc_ImportError, "init CyRK.cy.events");
   }
   __pyx_L0:;
   __Pyx_RefNannyFinishContext();
@@ -2519,31 +2530,13 @@ static int __Pyx_InitCachedConstants(__pyx_mstatetype *__pyx_mstate) {
 static int __Pyx_InitConstants(__pyx_mstatetype *__pyx_mstate) {
   CYTHON_UNUSED_VAR(__pyx_mstate);
   {
-    const struct { const unsigned int length: 8; } index[] = {{1},{18},{8},{10},{8},{12},{12},{10},{8},{141}};
-    #if (CYTHON_COMPRESS_STRINGS) == 2 /* compression: bz2 (200 bytes) */
-const char* const cstring = "BZh91AY&SYG\272\022\030\000\000\016\337\200@\000@t\000\000\206\002\300\000\277\177\377p0\000\271P\324\231\031\006\023\324\3204\003G\250a\221\2014\300\231\014M\030\tQ\223R~\251\350L\020\301=@\321\254\255\010\341\211\350\234\007%4\204Fi;q\345\220[\n\302\0259\247-\2258\241G\225\225,\242\221\347\357g\334\372\302Q\367\032\031\223\241\255B\230\3730S\260\270\005\304\016\371\211\030\210i\314pU\002\004\030\001\224\333\222\342\351\002PJ5R\320\233\003\0244R\321\035.?\031\365\334R\350N\271\271\034r%\253^.\271^\215(\235\304\361\224:?\346B\263D\236(\317\361w$S\205\t\004{\241!\200";
-    PyObject *data = __Pyx_DecompressString(cstring, 200, 2);
-    if (unlikely(!data)) __PYX_ERR(0, 1, __pyx_L1_error)
-    const char* const bytes = __Pyx_PyBytes_AsString(data);
-    #if !CYTHON_ASSUME_SAFE_MACROS
-    if (likely(bytes)); else { Py_DECREF(data); __PYX_ERR(0, 1, __pyx_L1_error) }
-    #endif
-    #elif (CYTHON_COMPRESS_STRINGS) != 0 /* compression: zlib (155 bytes) */
-const char* const cstring = "x\332UNI\016\3020\014\344)9\322\252\177\340\002GD\177`\271\211#\002N\322\305\251\010\257'm\204\004>\330\343Y,\2374\273@\340\002\310\214\232\006\324O\000\217e/\345\243IL\033\n\350\3679\346\027h\034\335\206\247\204\\\371\205\304\220\305\304\002 \264\224nb\032\230\324\261\317\267\341AZT\333\251>_V\nr%\271G\323\251\305\275\t\244S\325\372\235\252m\016kt\346?zv\326\322T\223\315A#s\371\204\266k`\347\350A\347\242\204*\230\335\373\313\177\000\243`U]";
-    PyObject *data = __Pyx_DecompressString(cstring, 155, 1);
-    if (unlikely(!data)) __PYX_ERR(0, 1, __pyx_L1_error)
-    const char* const bytes = __Pyx_PyBytes_AsString(data);
-    #if !CYTHON_ASSUME_SAFE_MACROS
-    if (likely(bytes)); else { Py_DECREF(data); __PYX_ERR(0, 1, __pyx_L1_error) }
-    #endif
-    #else /* compression: none (228 bytes) */
-const char* const bytes = "?cline_in_traceback__main____module____name____pyx_capi____qualname__setdefault__test__double (PyObject *, PyEventMethod, size_t, double, double *)\000void (PyObject *, DiffeqMethod)\000call_pyevent_from_cython\000call_diffeq_from_cython";
+    const struct { const unsigned int length: 5; } index[] = {{1},{18},{8},{10},{8},{12},{10},{8}};
+const char* const bytes = "?cline_in_traceback__main____module____name____qualname__setdefault__test__";
     PyObject *data = NULL;
     CYTHON_UNUSED_VAR(__Pyx_DecompressString);
-    #endif
     PyObject **stringtab = __pyx_mstate->__pyx_string_tab;
     Py_ssize_t pos = 0;
-    for (int i = 0; i < 9; i++) {
+    for (int i = 0; i < 8; i++) {
       Py_ssize_t bytes_length = index[i].length;
       PyObject *string = PyUnicode_DecodeUTF8(bytes + pos, bytes_length, NULL);
       if (likely(string) && i >= 1) PyUnicode_InternInPlace(&string);
@@ -2554,41 +2547,12 @@ const char* const bytes = "?cline_in_traceback__main____module____name____pyx_ca
       stringtab[i] = string;
       pos += bytes_length;
     }
-    for (int i = 9; i < 10; i++) {
-      Py_ssize_t bytes_length = index[i].length;
-      PyObject *string = PyBytes_FromStringAndSize(bytes + pos, bytes_length);
-      stringtab[i] = string;
-      pos += bytes_length;
-      if (unlikely(!string)) {
-        Py_XDECREF(data);
-        __PYX_ERR(0, 1, __pyx_L1_error)
-      }
-    }
     Py_XDECREF(data);
-    for (Py_ssize_t i = 0; i < 10; i++) {
+    for (Py_ssize_t i = 0; i < 8; i++) {
       if (unlikely(PyObject_Hash(stringtab[i]) == -1)) {
         __PYX_ERR(0, 1, __pyx_L1_error)
       }
     }
-    #if CYTHON_IMMORTAL_CONSTANTS
-    {
-      PyObject **table = stringtab + 9;
-      for (Py_ssize_t i=0; i<1; ++i) {
-        #if CYTHON_COMPILING_IN_CPYTHON_FREETHREADING
-        #if PY_VERSION_HEX < 0x030E0000
-        if (_Py_IsOwnedByCurrentThread(table[i]) && Py_REFCNT(table[i]) == 1)
-        #else
-        if (PyUnstable_Object_IsUniquelyReferenced(table[i]))
-        #endif
-        {
-          Py_SET_REFCNT(table[i], _Py_IMMORTAL_REFCNT_LOCAL);
-        }
-        #else
-        Py_SET_REFCNT(table[i], _Py_IMMORTAL_INITIAL_REFCNT);
-        #endif
-      }
-    }
-    #endif
   }
   return 0;
   __pyx_L1_error:;
@@ -2647,43 +2611,88 @@ end:
 }
 #endif
 
-/* FunctionExport */
-static int __Pyx_ExportFunction(PyObject *api_dict, const char *name, void (*f)(void), const char *sig) {
-    PyObject *cobj;
-    union {
-        void (*fp)(void);
-        void *p;
-    } tmp;
-    tmp.fp = f;
-    cobj = PyCapsule_New(tmp.p, sig, 0);
-    if (!cobj)
+/* TypeImport */
+#ifndef __PYX_HAVE_RT_ImportType_3_2_4
+#define __PYX_HAVE_RT_ImportType_3_2_4
+static PyTypeObject *__Pyx_ImportType_3_2_4(PyObject *module, const char *module_name, const char *class_name,
+    size_t size, size_t alignment, enum __Pyx_ImportType_CheckSize_3_2_4 check_size)
+{
+    PyObject *result = 0;
+    Py_ssize_t basicsize;
+    Py_ssize_t itemsize;
+#if defined(Py_LIMITED_API) || (defined(CYTHON_COMPILING_IN_LIMITED_API) && CYTHON_COMPILING_IN_LIMITED_API)
+    PyObject *py_basicsize;
+    PyObject *py_itemsize;
+#endif
+    result = PyObject_GetAttrString(module, class_name);
+    if (!result)
         goto bad;
-    if (PyDict_SetItemString(api_dict, name, cobj) < 0)
+    if (!PyType_Check(result)) {
+        PyErr_Format(PyExc_TypeError,
+            "%.200s.%.200s is not a type object",
+            module_name, class_name);
         goto bad;
-    Py_DECREF(cobj);
-    return 0;
-bad:
-    Py_XDECREF(cobj);
-    return -1;
-}
-
-/* GetApiDict */
-static PyObject *__Pyx_ApiExport_GetApiDict(void) {
-    PyObject *d;
-    if (__Pyx_PyDict_GetItemRef(__pyx_mstate_global->__pyx_d, __pyx_mstate_global->__pyx_n_u_pyx_capi, &d) == -1)
-        return NULL;
-    if (!d) {
-        d = PyDict_New();
-        if (!d)
-            goto bad;
-        if (PyObject_SetAttr(__pyx_m, __pyx_mstate_global->__pyx_n_u_pyx_capi, d) < 0)
-            goto bad;
     }
-    return d;
+#if !( defined(Py_LIMITED_API) || (defined(CYTHON_COMPILING_IN_LIMITED_API) && CYTHON_COMPILING_IN_LIMITED_API) )
+    basicsize = ((PyTypeObject *)result)->tp_basicsize;
+    itemsize = ((PyTypeObject *)result)->tp_itemsize;
+#else
+    if (size == 0) {
+        return (PyTypeObject *)result;
+    }
+    py_basicsize = PyObject_GetAttrString(result, "__basicsize__");
+    if (!py_basicsize)
+        goto bad;
+    basicsize = PyLong_AsSsize_t(py_basicsize);
+    Py_DECREF(py_basicsize);
+    py_basicsize = 0;
+    if (basicsize == (Py_ssize_t)-1 && PyErr_Occurred())
+        goto bad;
+    py_itemsize = PyObject_GetAttrString(result, "__itemsize__");
+    if (!py_itemsize)
+        goto bad;
+    itemsize = PyLong_AsSsize_t(py_itemsize);
+    Py_DECREF(py_itemsize);
+    py_itemsize = 0;
+    if (itemsize == (Py_ssize_t)-1 && PyErr_Occurred())
+        goto bad;
+#endif
+    if (itemsize) {
+        if (size % alignment) {
+            alignment = size % alignment;
+        }
+        if (itemsize < (Py_ssize_t)alignment)
+            itemsize = (Py_ssize_t)alignment;
+    }
+    if ((size_t)(basicsize + itemsize) < size) {
+        PyErr_Format(PyExc_ValueError,
+            "%.200s.%.200s size changed, may indicate binary incompatibility. "
+            "Expected %zd from C header, got %zd from PyObject",
+            module_name, class_name, size, basicsize+itemsize);
+        goto bad;
+    }
+    if (check_size == __Pyx_ImportType_CheckSize_Error_3_2_4 &&
+            ((size_t)basicsize > size || (size_t)(basicsize + itemsize) < size)) {
+        PyErr_Format(PyExc_ValueError,
+            "%.200s.%.200s size changed, may indicate binary incompatibility. "
+            "Expected %zd from C header, got %zd-%zd from PyObject",
+            module_name, class_name, size, basicsize, basicsize+itemsize);
+        goto bad;
+    }
+    else if (check_size == __Pyx_ImportType_CheckSize_Warn_3_2_4 && (size_t)basicsize > size) {
+        if (PyErr_WarnFormat(NULL, 0,
+                "%.200s.%.200s size changed, may indicate binary incompatibility. "
+                "Expected %zd from C header, got %zd from PyObject",
+                module_name, class_name, size, basicsize) < 0) {
+            goto bad;
+        }
+    }
+    return (PyTypeObject *)result;
 bad:
-    Py_XDECREF(d);
+    Py_XDECREF(result);
     return NULL;
 }
+#endif
 
 /* dict_setdefault (used by CLineInTraceback) */
 static CYTHON_INLINE PyObject *__Pyx_PyDict_SetDefault(PyObject *d, PyObject *key, PyObject *default_value) {

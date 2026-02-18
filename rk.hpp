@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include "common.hpp"
+#include "c_common.hpp"
 #include "cysolver.hpp"
 
 // ####################################################################################################################
@@ -10,6 +10,7 @@
 struct RKConfig : public ProblemConfig {
     using ProblemConfig::ProblemConfig;
 
+    virtual ~RKConfig() {};
     RKConfig(
         DiffeqFuncType diffeq_ptr_,
         double t_start_,
@@ -24,6 +25,7 @@ struct RKConfig : public ProblemConfig {
         PreEvalFunc pre_eval_func_,
         bool capture_dense_output_,
         bool force_retain_solver_,
+        std::vector<Event>& events_vec_,
         std::vector<double>& rtols_,
         std::vector<double>& atols_,
         double max_step_size_,
@@ -49,6 +51,7 @@ struct RKConfig : public ProblemConfig {
         PreEvalFunc pre_eval_func_,
         bool capture_dense_output_,
         bool force_retain_solver_,
+        std::vector<Event>& events_vec_,
         std::vector<double>& rtols_,
         std::vector<double>& atols_,
         double max_step_size_,
@@ -75,6 +78,8 @@ protected:
     const double error_safety    = SAFETY;
     const double min_step_factor = MIN_FACTOR;
     const double max_step_factor = MAX_FACTOR;
+    size_t K_stride = 0;
+    size_t K_size = 0;
 
     // RK constants
     size_t order = 0;

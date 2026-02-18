@@ -5,9 +5,11 @@
 #include <vector>
 #include <cstring>
 
-#include "common.hpp"
-#include "cysolver.hpp"
+#include "c_common.hpp"
+//#include "cysolution.hpp"
 
+// Forward delcaration of the CySolverResult to avoid circular dependencies
+class CySolverResult;
 
 class CySolverDense {
     /* Many of these dense classes will be built if the integration is long and `dense_output=True`. It needs to be as light weight as possible.
@@ -18,11 +20,12 @@ class CySolverDense {
 protected:
     // y and t state info
     // Dense state variables
+    bool initialized = false;
+    bool state_set = false;
     size_t Q_order = 0;
-    size_t num_y   = 0;  // Number of dependent variables
 
-    // Pointer to the CySolverBase class
-    CySolverBase* solver_ptr = nullptr;
+    // Pointer to the CySolverResult class
+    CySolverResult* solution_ptr = nullptr;
 
     // Time step info
     double t_old = 0.0;
@@ -36,6 +39,8 @@ protected:
     std::vector<double> state_data_vec = std::vector<double>(PRE_ALLOC_NUMY * (4 + 1));
 
 public:
+    size_t num_y  = 0;  // Number of dependent variables
+    size_t num_dy = 0; // Number of total outputs (dy/dt + extra outputs)
 
 /* Methods */
 protected:
@@ -44,10 +49,11 @@ public:
     virtual ~CySolverDense();
     CySolverDense() {};
     CySolverDense(
-        CySolverBase* solver_ptr_,
+        CySolverResult* solution_ptr_,
         bool set_state
         );
 
+    virtual void setup(bool set_state);
     virtual void set_state();
     virtual void call(double t_interp, double* y_interp_ptr);
 };

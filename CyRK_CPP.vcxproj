@@ -158,22 +158,27 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="common.cpp" />
     <ClCompile Include="cysolution.cpp" />
     <ClCompile Include="cysolve.cpp" />
     <ClCompile Include="cysolver.cpp" />
     <ClCompile Include="cy_array.cpp" />
+    <ClCompile Include="c_brentq.cpp" />
+    <ClCompile Include="c_common.cpp" />
+    <ClCompile Include="c_events.cpp" />
     <ClCompile Include="dense.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="rk.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="common.hpp" />
     <ClInclude Include="cysolution.hpp" />
     <ClInclude Include="cysolve.hpp" />
     <ClInclude Include="cysolver.hpp" />
     <ClInclude Include="cy_array.hpp" />
+    <ClInclude Include="c_brentq.hpp" />
+    <ClInclude Include="c_common.hpp" />
+    <ClInclude Include="c_events.hpp" />
     <ClInclude Include="dense.hpp" />
+    <ClInclude Include="pyhooks.hpp" />
     <ClInclude Include="rk.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -44,6 +44,29 @@ static void test_extra_diffeq(double* dy_ptr, double time, double* y_ptr, char* 
     dy_ptr[3] = e2;
 }
 
+static void large_numy_diffeq(double* dy_ptr, double t, double* y_ptr, char* args_ptr, PreEvalFunc pre_eval_func)
+{
+    size_t num_y = 10000;
+
+    // Fix: reinterpret_cast is required for pointer-to-object conversions between unrelated types
+    double* args_dbl_ptr = reinterpret_cast<double*>(args_ptr);
+    double decay_rate = args_dbl_ptr[0];
+    double forcing_scale = args_dbl_ptr[1];
+
+    // This diffeq converges so should be stable
+    for (size_t i = 0; i < num_y; i++)
+    {
+        decay_rate *= 0.9999;
+
+        dy_ptr[i] = (decay_rate * y_ptr[i]) + (static_cast<double>(i)) * forcing_scale;
+        
+        // Add some coupling
+        if ((i + 1) < (num_y - 1)) [[likely]]
+        {
+            dy_ptr[i] += 0.5 * y_ptr[i + 1];
+        }
+    }
+}
 
 std::vector<double> linspace(double start, double end, size_t num_in)
 {
@@ -80,18 +103,24 @@ void test_regular(
     bool use_resets = false
 )
 {
-    DiffeqFuncType diffeq_func = test_diffeq;
+    DiffeqFuncType diffeq_func = large_numy_diffeq;
     if (num_extra > 0)
     {
         DiffeqFuncType diffeq_func = test_extra_diffeq;
     }
 
     double t_start = 0.0;
-    int max_i = 3000;
+    int max_i = 300;
 
-    std::vector<double> y0_vec = std::vector<double>(2);
-    y0_vec[0] = 20.0; // Initial condition for y0
-    y0_vec[1] = 20.0; // Initial condition for y0
+    //std::vector<double> y0_vec = std::vector<double>(2);
+    //y0_vec[0] = 20.0; // Initial condition for y0
+    //y0_vec[1] = 20.0; // Initial condition for y0
+    
+    std::vector<double> y0_vec = std::vector<double>(10000);
+    for (size_t i = 0; i < 10000; i++)
+    {
+        y0_vec[i] = 100.0;
+    }
 
     std::string msg = "No message";
 
@@ -109,7 +138,12 @@ void test_regular(
     size_t final_size;
     size_t sol_size;
     size_t num_interps = 0;
-    std::vector<char> args_vec = std::vector<char>(0);
+    std::vector<char> args_vec = std::vector<char>(2 * sizeof(double));
+    double* args_dbl_ptr = reinterpret_cast<double*>(args_vec.data());
+    args_dbl_ptr[0] = -0.5;
+    args_dbl_ptr[1] = 1.0e-5;
+
+    std::vector<Event> events_vec = std::vector<Event>(0);
 
     std::vector<double> t_eval_vec = std::vector<double>(0);
     if (len_t_eval > 0)
@@ -120,7 +154,7 @@ void test_regular(
     auto t1 = std::chrono::high_resolution_clock::now();
     auto t2 = std::chrono::high_resolution_clock::now();
     int k = 0;
-    int k_max = 20; // 15
+    int k_max = 10; // 15
     double total_runner = 0.0;
     double total_runner_ps = 0.0;
     double t_at_20;
@@ -159,10 +193,12 @@ void test_regular(
                     save_dense,
                     t_eval_vec,
                     nullptr, // pre_eval_func
+                    events_vec,
                     rtols_vec,
                     atols_vec,
                     INF, // max_step_size
-                    0.0 // first_step_size
+                    0.0, // first_step_size
+                    true  // Force retain solver.
                 );
                 t2 = std::chrono::high_resolution_clock::now();
             }
@@ -183,10 +219,12 @@ void test_regular(
                     save_dense,
                     t_eval_vec,
                     nullptr, // pre_eval_func
+                    events_vec,
                     rtols_vec,
                     atols_vec,
                     INF, // max_step_size
-                    0.0 // first_step_size
+                    0.0, // first_step_size
+                    true  // Force retain solver.
                 );
                 t2 = std::chrono::high_resolution_clock::now();
                 result_ptr = result_uptr_regular.get();
@@ -194,7 +232,7 @@ void test_regular(
 
             final_size = result_ptr->size;
             msg = result_ptr->message;
-            if (result_ptr->success)
+            /*if (result_ptr->success)
             {
                 num_interps = result_ptr->num_interpolates;
                 t_at_20 = result_ptr->time_domain_vec[4];
@@ -208,7 +246,7 @@ void test_regular(
                 y_at_20_ptr = nullptr;
                 y_int_at_20_ptr[0] = NULL;
                 y_int_at_20_ptr[1] = NULL;
-            }
+            }*/
 
             //std::cout << result->message_ptr << std::endl;
             sol_size = final_size * 2;
@@ -221,7 +259,7 @@ void test_regular(
 
         std::cout << "SIZE: " << final_size << std::endl;
         std::cout << "NUM INTERPS: " << num_interps << std::endl;
-        if (y_at_20_ptr)
+        /*if (y_at_20_ptr)
         {
             std::cout << "20 t = " << t_at_20 << "; y0 = " << y_at_20_ptr[0] << ", y1 = " << y_at_20_ptr[1] << std::endl;
         }
@@ -229,7 +267,7 @@ void test_regular(
         {
             std::cout << "20 t = " << t_at_20 << "; y0 = " << NULL << ", y1 = " << NULL << std::endl;
         }
-        std::cout << "DENSE INTERP:: " << "y0 = " << y_int_at_20_ptr[0] << ", y1 = " << y_int_at_20_ptr[1] << std::endl;
+        std::cout << "DENSE INTERP:: " << "y0 = " << y_int_at_20_ptr[0] << ", y1 = " << y_int_at_20_ptr[1] << std::endl;*/
         std::cout << "Message: " << msg << std::endl;
         std::cout << "AVERAGE: " << running_sum / max_i << "us\n" << std::endl;
         std::cout << "AVERAGE PS: " << running_sum_ps / max_i << "us\n" << std::endl;
@@ -255,13 +293,13 @@ void test_regular(
     }
     datastream.precision(32);
 
-    if (result_ptr)
+    /*if (result_ptr)
     {
         for (size_t i = 0; i < final_size; i++)
         {
             datastream << result_ptr->time_domain_vec[i] << ", " << result_ptr->solution[2 * i] << ", " << result_ptr->solution[2 * i + 1] << std::endl;
         }
-    }
+    }*/
     datastream.close();
     std::cout << "Data saved." << std::endl;
 
@@ -339,7 +377,7 @@ int main(){
     */
 
     test_regular(
-        5.0, // t_end
+        50.0, // t_end
         false, // Dense
         0,     // len t_eval 7070 == 2x; 1767 == 0.5x for tspan of (0, 500))
         0,     // num extra
@@ -348,6 +386,15 @@ int main(){
     );
 
     // 1333.07
+
+    // Large num_y tests 2026-02-18
+    // t_end = 50.0; dense = false; num_extra = 0; len_t_eval = 0; RK45; resets = True
+    // Size = 86
+    // v0 - Avg 13782.6   PS: 160.262
+    // v1 - Avg 13120.9   PS: 152.569
+    // v2 - Avg 18667.4   PS: 217.063
+    // v3 - Avg 12075.1   PS: 140.408
+
 
 
     return 0;

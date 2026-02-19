@@ -394,13 +394,13 @@ int main(){
         false, // Dense
         0,     // len t_eval 7070 == 2x; 1767 == 0.5x for tspan of (0, 500))
         0,     // num extra
-        ODEMethod::DOP853,      // Method
+        ODEMethod::RK45,      // Method
         true  // use_resets
     );
 
     // 1333.07
 
-    // Large num_y tests 2026-02-18
+    // Large num_y (simple) tests 2026-02-18
     // t_end = 50.0; dense = false; num_extra = 0; len_t_eval = 0; RK45; resets = True
     // Size = 86
     // v1.0 - Avg 13782.6   PS: 160.262
@@ -420,6 +420,24 @@ int main(){
     // vS-DOP2.4 - Avg 2439.71   PS:  243.971
     // vS-DOP-DEN2.5 - Avg 4909.61   PS:  490.961
     // vS-DOP2.4 - Avg 2497.13   PS:  249.713
+
+    // vS-RK4.0 - Avg  909.039   PS:  90.9039
+    // vS-DOP4.0 - Avg 2411.5   PS:   241.15
+    // vS-RK4.1 - Avg  723.064   PS:  72.3064
+    // vS-DOP4.1 - Avg 1764.29   PS:   176.429
+    // vS-RK4.2 - Avg  651.648   PS:   65.1648
+    // vS-DOP4.2 - Avg 1643.67   PS:   164.367
+    // vS-RK-DENSE4.2 - Avg  1290.7   PS:   129.07
+    // vS-DOP-DENSE4.2 - Avg  4069.5   PS:   406.95
+    // vS-RK-DENSE4.3 - Avg  1090.9   PS:   109.09
+    // vS-DOP-DENSE4.3 - Avg   3449.36   PS:   344.936
+
+    // vS-RK-DENSE4.4 - Avg  1141.5   PS:  114.15
+    // vS-DOP-DENSE4.4 - Avg   3434.51   PS:   343.451
+    // vS-RK4.4 - Avg  674.137   PS:   67.4137
+    // vS-DOP4.4 - Avg  1667.48   PS:   166.748
+    // vS-RK4.5 - Avg  543.365   PS:   54.3365
+    // vS-DOP4.5 - Avg  1547.58   PS:   154.758
 
 
     return 0;

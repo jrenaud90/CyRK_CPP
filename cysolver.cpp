@@ -221,7 +221,7 @@ void CySolverBase::set_Q_order(size_t* Q_order_ptr)
     // Overwritten by subclasses.
 }
 
-void CySolverBase::set_Q_array(double* Q_ptr)
+void CySolverBase::set_Q_array(double* Q_ptr) noexcept
 {
     // Overwritten by subclasses.
 }

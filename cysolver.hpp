@@ -193,7 +193,7 @@ public:
     CySolverBase(CySolverResult* storage_ptr_);
 
     virtual void set_Q_order(size_t* Q_order_ptr);
-    virtual void set_Q_array(double* Q_ptr);
+    virtual void set_Q_array(double* Q_ptr) noexcept;
     void clear_python_refs();
     void offload_to_temp() noexcept;
     void load_back_from_temp() noexcept;

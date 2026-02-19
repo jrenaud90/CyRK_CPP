@@ -186,9 +186,10 @@ CyrkErrorCodes CySolverBase::p_additional_setup() noexcept
     return CyrkErrorCodes::NO_ERROR;
 }
 
-void CySolverBase::p_estimate_error() noexcept
+double CySolverBase::p_estimate_error() noexcept
 {
     // Overwritten by subclasses.
+    return 0.0;
 }
 
 void CySolverBase::p_step_implementation() noexcept

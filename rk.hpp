@@ -92,6 +92,7 @@ protected:
     size_t len_Pcols      = 0;
     size_t nstages_numy   = 0;
     double error_exponent = 0.0;
+    double A_at_10        = 0.0;
 
     // Pointers to RK constant arrays
     const double* C_ptr      = nullptr;
@@ -105,9 +106,11 @@ protected:
     const double* AEXTRA_ptr = nullptr;
     const double* CEXTRA_ptr = nullptr;
     double* K_ptr            = nullptr;
+    double** K_ptr_index_ptr = nullptr;
 
     // K is not const. Its values are stored in an array that is held by this class.
-    std::vector<double> K = std::vector<double>(PRE_ALLOC_NUMY * 7);
+    std::vector<double> K            = std::vector<double>(PRE_ALLOC_NUMY * 7);
+    std::vector<double*> K_ptr_index = std::vector<double*>(PRE_ALLOC_NUMY);
 
     // Step size parameters
     double user_provided_first_step_size = 0.0;
@@ -116,14 +119,11 @@ protected:
     double step_size_old = 0.0;
     double max_step_size = 0.0;
 
-    // Error estimate
-    double error_norm = 0.0;
-
 
 // Methods
 protected:
     virtual CyrkErrorCodes p_additional_setup() noexcept override;
-    virtual void p_estimate_error() noexcept override;
+    virtual double p_estimate_error() noexcept override;
     virtual void p_step_implementation() noexcept override;
     virtual void p_calc_first_step_size() noexcept override;
 
@@ -778,7 +778,7 @@ protected:
 
 
     virtual CyrkErrorCodes p_additional_setup() noexcept override;
-    virtual void p_estimate_error() noexcept override;
+    virtual double p_estimate_error() noexcept override;
 
 public:
     // Copy over base class constructors

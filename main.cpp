@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstring>
 #include <vector>
+# define M_PI           3.14159265358979323846 
 
 #include <cmath>
 #include "cysolve.hpp"
@@ -58,14 +59,25 @@ static void large_numy_diffeq(double* dy_ptr, double t, double* y_ptr, char* arg
     {
         decay_rate *= 0.9999;
 
-        dy_ptr[i] = (decay_rate * y_ptr[i]) + (static_cast<double>(i)) * forcing_scale;
-        
-        // Add some coupling
-        if ((i + 1) < (num_y - 1)) [[likely]]
+        if (i < (num_y - 1))
         {
-            dy_ptr[i] += 0.5 * y_ptr[i + 1];
+            dy_ptr[i] = decay_rate * y_ptr[i] * sin(2 * M_PI * t / 5.0 + y_ptr[i + 1] / 50.0);
+        }
+        else
+        {
+            dy_ptr[i] = decay_rate * y_ptr[i] * sin(2 * M_PI * t / 5.0);
         }
     }
+}
+
+static void large_numy_simple_diffeq(double* dy_ptr, double t, double* y_ptr, char* args_ptr, PreEvalFunc pre_eval_func)
+{
+    const size_t num_y = 10000;
+
+    dy_ptr[0] = sin(2 * M_PI * t / 10.0);
+
+    // Set all else to zero.
+    memset(&dy_ptr[0], 0, num_y - 1);
 }
 
 std::vector<double> linspace(double start, double end, size_t num_in)
@@ -103,7 +115,8 @@ void test_regular(
     bool use_resets = false
 )
 {
-    DiffeqFuncType diffeq_func = large_numy_diffeq;
+    //DiffeqFuncType diffeq_func = large_numy_diffeq;
+    DiffeqFuncType diffeq_func = large_numy_simple_diffeq;
     if (num_extra > 0)
     {
         DiffeqFuncType diffeq_func = test_extra_diffeq;
@@ -154,7 +167,7 @@ void test_regular(
     auto t1 = std::chrono::high_resolution_clock::now();
     auto t2 = std::chrono::high_resolution_clock::now();
     int k = 0;
-    int k_max = 10; // 15
+    int k_max = 20; // 15
     double total_runner = 0.0;
     double total_runner_ps = 0.0;
     double t_at_20;
@@ -381,7 +394,7 @@ int main(){
         false, // Dense
         0,     // len t_eval 7070 == 2x; 1767 == 0.5x for tspan of (0, 500))
         0,     // num extra
-        ODEMethod::RK45,      // Method
+        ODEMethod::DOP853,      // Method
         true  // use_resets
     );
 
@@ -390,11 +403,23 @@ int main(){
     // Large num_y tests 2026-02-18
     // t_end = 50.0; dense = false; num_extra = 0; len_t_eval = 0; RK45; resets = True
     // Size = 86
-    // v0 - Avg 13782.6   PS: 160.262
-    // v1 - Avg 13120.9   PS: 152.569
-    // v2 - Avg 18667.4   PS: 217.063
-    // v3 - Avg 12075.1   PS: 140.408
-
+    // v1.0 - Avg 13782.6   PS: 160.262
+    // v1.1 - Avg 13120.9   PS: 152.569
+    // v1.2 - Avg 18667.4   PS: 217.063
+    // v1.3 - Avg 12075.1   PS: 140.408
+    // vC2.0 (new diffeq) - Avg 71664.3   PS: 421.555
+    // vS2.0 (new diffeq) - Avg 925.595   PS: 92.5595  ; 935.196 PS: 93.5196
+    // vS2.1 - Avg 925.595   PS: 92.5595
+    // vS2.1 - Avg 905.809   PS: 90.5809
+    // vS2.2 - Avg 892.034   PS: 89.2034
+    // vS2.3 - Avg 934.32   PS: 93.432
+    // vS2.3 - Avg 881.91   PS: 88.191
+    // vS-DEN2.3 - Avg 1679.82   PS: 167.982
+    // vS-DEN2.3 - Avg 1626.39   PS: 162.639
+    // vS-DEN2.4 - Avg 1507.08   PS:  150.708
+    // vS-DOP2.4 - Avg 2439.71   PS:  243.971
+    // vS-DOP-DEN2.5 - Avg 4909.61   PS:  490.961
+    // vS-DOP2.4 - Avg 2497.13   PS:  249.713
 
 
     return 0;

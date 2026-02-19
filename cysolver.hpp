@@ -181,7 +181,7 @@ class CySolverBase {
 // Methods
 protected:
     virtual CyrkErrorCodes p_additional_setup() noexcept;
-    virtual void p_estimate_error() noexcept;
+    virtual double p_estimate_error() noexcept;
     virtual void p_step_implementation() noexcept;
     inline void p_cy_diffeq() noexcept;
     virtual void p_calc_first_step_size() noexcept;

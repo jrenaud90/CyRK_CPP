@@ -21,6 +21,9 @@
 //#include <Python.h>
 //#include "pysolver_cyhook_api.h"
 
+//struct _object;
+//typedef _object PyObject;
+
 class Event
 {
 public:

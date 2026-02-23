@@ -9,13 +9,13 @@
 // Pre-processor constants
 #if defined(_MSC_VER)
     // Microsoft Visual C++
-    #define CYRK_RESTRICT __restrict
+#define CYRK_RESTRICT __restrict
 #elif defined(__GNUC__) || defined(__clang__)
     // GCC and Clang
-    #define CYRK_RESTRICT __restrict__
+#define CYRK_RESTRICT __restrict__
 #else
     // Fallback for other compilers (no optimization)
-    #define CYRK_RESTRICT
+#define CYRK_RESTRICT
 #endif
 
 static const size_t BUFFER_SIZE     = 16;
@@ -23,7 +23,7 @@ static const size_t PRE_ALLOC_STEPS = 256;
 static const size_t PRE_ALLOC_NUMY  = 16;
 
 enum class CyrkErrorCodes : int {
-    
+
     // Temporary statuses
     CONVERGED = 20,
     INITIALIZING = 10,
@@ -87,7 +87,7 @@ inline const std::map<CyrkErrorCodes, std::string> CyrkErrorMessages = {
 
     { CyrkErrorCodes::INITIALIZING,
       "Initializing. If you see this message then it was likely interrupted." },
-    
+
     { CyrkErrorCodes::EVENT_TERMINATED,
       "Integration ended early: An event has been triggered the maximum allowed times. No issues detected." },
 
@@ -228,7 +228,8 @@ struct MaxNumStepsOutput
 
     MaxNumStepsOutput(bool user_provided, size_t max_steps) :
         user_provided_max_num_steps(user_provided),
-        max_num_steps(max_steps) { };
+        max_num_steps(max_steps) {
+    };
 };
 
 

@@ -4,9 +4,9 @@
 
 // Constructors
 CySolverDense::CySolverDense(
-            CySolverResult* solution_ptr_,
-            bool set_state) :
-        solution_ptr(solution_ptr_)
+    CySolverResult* solution_ptr_,
+    bool set_state) :
+    solution_ptr(solution_ptr_)
 {
     this->setup(set_state);
 }
@@ -50,11 +50,11 @@ void CySolverDense::set_state()
     if (this->initialized) [[likely]]
     {
         CySolverBase* solver_ptr = this->solution_ptr->solver_uptr.get();
-    
+
         // Store time information
         this->t_old = solver_ptr->t_old;
         this->t_now = solver_ptr->t_now;
-        
+
         // Calculate step
         this->step = this->t_now - this->t_old;
 
@@ -120,7 +120,7 @@ void CySolverDense::call(double t_interp, double* y_interp_ptr)
             // P=3
             cumulative_prod *= step_factor;
             temp_double += Q_ptr[Q_stride + 3] * cumulative_prod;
-            
+
             // Finally multiply by step
             temp_double *= this->step;
 
@@ -181,7 +181,7 @@ void CySolverDense::call(double t_interp, double* y_interp_ptr)
             // not included in the, for example, Q matrix building process.
             // TODO: Perhaps we could include them in that? 
             // For now, we will make an additional call to the diffeq using the y0 we just found above and t_interp.
-            
+
             size_t num_dy = solver_ptr->num_dy;
 
             // We will be overwriting the solver's now variables so tell it to store a copy that it can be restored back to.
@@ -190,7 +190,7 @@ void CySolverDense::call(double t_interp, double* y_interp_ptr)
             // Load new values into t and y
             std::memcpy(solver_ptr->y_now_ptr, y_interp_ptr, sizeof(double) * this->num_y);
             solver_ptr->t_now = t_interp;
-            
+
             // Call diffeq to update dy_now pointer
             solver_ptr->diffeq(solver_ptr);
 

@@ -4,28 +4,28 @@
 #include "cysolver.hpp"
 
 void baseline_cysolve_ivp_noreturn(
-        CySolverResult* solution_ptr,
-        DiffeqFuncType diffeq_ptr,
-        double t_start,
-        double t_end,
-        std::vector<double>& y0_vec,
-        // General optional arguments
-        size_t expected_size,
-        size_t num_extra,
-        std::vector<char>& args_vec,
-        size_t max_num_steps,
-        size_t max_ram_MB,
-        bool capture_dense_output,
-        std::vector<double>& t_eval_vec,
-        PreEvalFunc pre_eval_func,
-        std::vector<Event>& events_vec,
-        std::vector<double>& rtols,
-        std::vector<double>& atols,
-        double max_step_size,
-        double first_step_size,
-        // Parameters that deal with CyRK's memory management strategy
-        bool force_retain_solver
-        )
+    CySolverResult* solution_ptr,
+    DiffeqFuncType diffeq_ptr,
+    double t_start,
+    double t_end,
+    std::vector<double>& y0_vec,
+    // General optional arguments
+    size_t expected_size,
+    size_t num_extra,
+    std::vector<char>& args_vec,
+    size_t max_num_steps,
+    size_t max_ram_MB,
+    bool capture_dense_output,
+    std::vector<double>& t_eval_vec,
+    PreEvalFunc pre_eval_func,
+    std::vector<Event>& events_vec,
+    std::vector<double>& rtols,
+    std::vector<double>& atols,
+    double max_step_size,
+    double first_step_size,
+    // Parameters that deal with CyRK's memory management strategy
+    bool force_retain_solver
+)
 {
     // For now we are only ever using RK methods so it is safe to assume RK Config.
     RKConfig* rk_config_ptr = static_cast<RKConfig*>(solution_ptr->config_uptr.get());
@@ -59,28 +59,28 @@ void baseline_cysolve_ivp_noreturn(
 }
 
 std::unique_ptr<CySolverResult> baseline_cysolve_ivp(
-        DiffeqFuncType diffeq_ptr,
-        double t_start,
-        double t_end,
-        std::vector<double>& y0_vec,
-        ODEMethod integration_method,
-        // General optional arguments
-        size_t expected_size,
-        size_t num_extra,
-        std::vector<char>& args_vec,
-        size_t max_num_steps,
-        size_t max_ram_MB,
-        bool capture_dense_output,
-        std::vector<double>& t_eval_vec,
-        PreEvalFunc pre_eval_func,
-        std::vector<Event>& events_vec,
-        std::vector<double>& rtols,
-        std::vector<double>& atols,
-        double max_step_size,
-        double first_step_size,
-        // Parameters that deal with CyRK's memory management strategy
-        bool force_retain_solver
-        )
+    DiffeqFuncType diffeq_ptr,
+    double t_start,
+    double t_end,
+    std::vector<double>& y0_vec,
+    ODEMethod integration_method,
+    // General optional arguments
+    size_t expected_size,
+    size_t num_extra,
+    std::vector<char>& args_vec,
+    size_t max_num_steps,
+    size_t max_ram_MB,
+    bool capture_dense_output,
+    std::vector<double>& t_eval_vec,
+    PreEvalFunc pre_eval_func,
+    std::vector<Event>& events_vec,
+    std::vector<double>& rtols,
+    std::vector<double>& atols,
+    double max_step_size,
+    double first_step_size,
+    // Parameters that deal with CyRK's memory management strategy
+    bool force_retain_solver
+)
 {
     // Build storage class
     std::unique_ptr<CySolverResult> solution_uptr =

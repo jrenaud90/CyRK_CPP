@@ -65,7 +65,7 @@ struct RKConfig : public ProblemConfig {
 // ####################################################################################################################
 class RKSolver : public CySolverBase {
 
-// Attributes
+    // Attributes
 protected:
     // Tolerances
     // For the same reason num_y is limited, the total number of tolerances are limited.
@@ -120,7 +120,7 @@ protected:
     double max_step_size = 0.0;
 
 
-// Methods
+    // Methods
 protected:
     virtual CyrkErrorCodes p_additional_setup() noexcept override;
     virtual double p_estimate_error() noexcept override;

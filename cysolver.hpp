@@ -154,31 +154,28 @@ struct ProblemConfig {
     virtual void update_properties_from_config(ProblemConfig* new_config_ptr);
 };
 
-struct NowStatePointers 
+struct NowStatePointers
 {
     double* t_now_ptr;
     double* y_now_ptr;
     double* dy_now_ptr;
-    double* y_old_ptr;
-    double* dy_old_ptr;
 
-    NowStatePointers():
-        t_now_ptr(nullptr), y_now_ptr(nullptr), dy_now_ptr(nullptr),
-        y_old_ptr(nullptr), dy_old_ptr(nullptr)
-    { }
+    NowStatePointers() :
+        t_now_ptr(nullptr), y_now_ptr(nullptr), dy_now_ptr(nullptr)
+    {
+    }
 
     NowStatePointers(
-            double* t_now_ptr_, double* y_now_ptr_, double* dy_now_ptr_, 
-            double* y_old_ptr_, double* dy_old_ptr_
-            ):
-        t_now_ptr(t_now_ptr_), y_now_ptr(y_now_ptr_), dy_now_ptr(dy_now_ptr_),
-        y_old_ptr(y_old_ptr_), dy_old_ptr(dy_old_ptr_)
-    { }
+        double* t_now_ptr_, double* y_now_ptr_, double* dy_now_ptr_
+    ) :
+        t_now_ptr(t_now_ptr_), y_now_ptr(y_now_ptr_), dy_now_ptr(dy_now_ptr_)
+    {
+    }
 };
 
 class CySolverBase {
 
-// Methods
+    // Methods
 protected:
     virtual CyrkErrorCodes p_additional_setup() noexcept;
     virtual double p_estimate_error() noexcept;
@@ -212,7 +209,7 @@ public:
         DiffeqMethod py_diffeq_method);
     void py_diffeq();
 
-// Attributes
+    // Attributes
 protected:
     // Result storage
     CySolverResult* storage_ptr = nullptr;
@@ -243,7 +240,7 @@ protected:
     // Additional arguments for the diffeq
     size_t size_of_args = 0;
     char* args_ptr      = nullptr;
-    
+
     // t_eval information
     std::vector<double> t_eval_reverse_vec = std::vector<double>(); // Used if t_eval is provided and doing backwards integration
     double* t_eval_ptr      = nullptr;
@@ -293,7 +290,6 @@ public:
     bool use_dense_output            = false;
     bool user_provided_max_num_steps = false;
     bool use_pysolver                = false;
-    bool swap_flag                   = false; // Flag that toggles each time y_old is swapped for y_now; PySolver will look for this to determine which numpy array it needs to use.
 
     ODEMethod integration_method = ODEMethod::NO_METHOD_SET;
 

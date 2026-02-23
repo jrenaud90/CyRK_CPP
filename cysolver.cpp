@@ -5,6 +5,28 @@
 #include "dense.hpp"
 #include "cysolution.hpp"
 
+// !!!
+// Uncomment these dummy methods if working outside of CyRK and you just want the program to compile and run for testing/developing the C++ only code.
+
+/*
+bool import_CyRK__cy__pysolver_cyhook()
+{
+    return true;
+}
+
+int call_diffeq_from_cython(PyObject* x, DiffeqMethod y)
+{
+    return 1;
+}
+
+void Py_XINCREF(PyObject* x)
+{
+}
+
+void Py_XDECREF(PyObject* x)
+{
+}
+*/
 
 /* ========================================================================= */
 /* ========================  Configurations  =============================== */
@@ -14,56 +36,56 @@ ProblemConfig::ProblemConfig()
 }
 
 ProblemConfig::ProblemConfig(
-        DiffeqFuncType diffeq_ptr_,
-        double t_start_,
-        double t_end_,
-        std::vector<double>& y0_vec_): 
-            diffeq_ptr(diffeq_ptr_),
-            t_start(t_start_),
-            t_end(t_end_),
-            y0_vec(y0_vec_)
+    DiffeqFuncType diffeq_ptr_,
+    double t_start_,
+    double t_end_,
+    std::vector<double>& y0_vec_) :
+    diffeq_ptr(diffeq_ptr_),
+    t_start(t_start_),
+    t_end(t_end_),
+    y0_vec(y0_vec_)
 {
     this->initialize();
 }
 
 ProblemConfig::ProblemConfig(
-        DiffeqFuncType diffeq_ptr_,
-        double t_start_,
-        double t_end_,
-        std::vector<double>& y0_vec_,
-        std::vector<char>& args_vec_,
-        std::vector<double>& t_eval_vec_,
-        size_t num_extra_,
-        size_t expected_size_,
-        size_t max_num_steps_,
-        size_t max_ram_MB_,
-        PreEvalFunc pre_eval_func_,
-        bool capture_dense_output_,
-        bool force_retain_solver_,
-        std::vector<Event>& events_vec_): 
-            diffeq_ptr(diffeq_ptr_),
-            t_start(t_start_),
-            t_end(t_end_),
-            y0_vec(y0_vec_),
-            args_vec(args_vec_),
-            t_eval_vec(t_eval_vec_),
-            num_extra(num_extra_),
-            expected_size(expected_size_),
-            max_num_steps(max_num_steps_),
-            max_ram_MB(max_ram_MB_),
-            pre_eval_func(pre_eval_func_),
-            capture_dense_output(capture_dense_output_),
-            force_retain_solver(force_retain_solver_),
-            events_vec(events_vec_)
+    DiffeqFuncType diffeq_ptr_,
+    double t_start_,
+    double t_end_,
+    std::vector<double>& y0_vec_,
+    std::vector<char>& args_vec_,
+    std::vector<double>& t_eval_vec_,
+    size_t num_extra_,
+    size_t expected_size_,
+    size_t max_num_steps_,
+    size_t max_ram_MB_,
+    PreEvalFunc pre_eval_func_,
+    bool capture_dense_output_,
+    bool force_retain_solver_,
+    std::vector<Event>& events_vec_) :
+    diffeq_ptr(diffeq_ptr_),
+    t_start(t_start_),
+    t_end(t_end_),
+    y0_vec(y0_vec_),
+    args_vec(args_vec_),
+    t_eval_vec(t_eval_vec_),
+    num_extra(num_extra_),
+    expected_size(expected_size_),
+    max_num_steps(max_num_steps_),
+    max_ram_MB(max_ram_MB_),
+    pre_eval_func(pre_eval_func_),
+    capture_dense_output(capture_dense_output_),
+    force_retain_solver(force_retain_solver_),
+    events_vec(events_vec_)
 {
     this->initialize();
 }
 
 void ProblemConfig::update_properties(
-        DiffeqFuncType diffeq_ptr_,
-        double t_start_,
-        double t_end_,
-        std::vector<double>& y0_vec_)
+    DiffeqFuncType diffeq_ptr_,
+    double t_start_,
+    double t_end_,
+    std::vector<double>& y0_vec_)
 {
     this->diffeq_ptr = diffeq_ptr_;
     this->t_start    = t_start_;
@@ -74,20 +96,20 @@ void ProblemConfig::update_properties(
 }
 
 void ProblemConfig::update_properties(
-        DiffeqFuncType diffeq_ptr_,
-        double t_start_,
-        double t_end_,
-        std::vector<double>& y0_vec_,
-        std::vector<char>& args_vec_,
-        std::vector<double>& t_eval_vec_,
-        size_t num_extra_,
-        size_t expected_size_,
-        size_t max_num_steps_,
-        size_t max_ram_MB_,
-        PreEvalFunc pre_eval_func_,
-        bool capture_dense_output_,
-        bool force_retain_solver_,
-        std::vector<Event>& events_vec_)
+    DiffeqFuncType diffeq_ptr_,
+    double t_start_,
+    double t_end_,
+    std::vector<double>& y0_vec_,
+    std::vector<char>& args_vec_,
+    std::vector<double>& t_eval_vec_,
+    size_t num_extra_,
+    size_t expected_size_,
+    size_t max_num_steps_,
+    size_t max_ram_MB_,
+    PreEvalFunc pre_eval_func_,
+    bool capture_dense_output_,
+    bool force_retain_solver_,
+    std::vector<Event>& events_vec_)
 {
     this->diffeq_ptr    = diffeq_ptr_;
     this->t_start       = t_start_;
@@ -151,14 +173,14 @@ void ProblemConfig::update_properties_from_config(ProblemConfig* new_config_ptr)
 /* =========================  Constructors  ================================ */
 /* ========================================================================= */
 CySolverBase::CySolverBase() :
-        integration_method(ODEMethod::BASE_METHOD)
+    integration_method(ODEMethod::BASE_METHOD)
 {
 
 }
 
-CySolverBase::CySolverBase(CySolverResult* storage_ptr_) : 
-        storage_ptr(storage_ptr_),
-        integration_method(ODEMethod::BASE_METHOD)
+CySolverBase::CySolverBase(CySolverResult* storage_ptr_) :
+    storage_ptr(storage_ptr_),
+    integration_method(ODEMethod::BASE_METHOD)
 {
     // Base constructor does not do much.
 }
@@ -252,7 +274,7 @@ void CySolverBase::load_back_from_temp() noexcept
 }
 
 CyrkErrorCodes CySolverBase::resize_num_y(size_t num_y_, size_t num_dy_)
-{    
+{
     // Setup y-vectors and pointers
     try
     {
@@ -287,7 +309,6 @@ CyrkErrorCodes CySolverBase::setup()
     this->setup_called      = false;
     this->error_flag        = false;
     this->check_events_flag = false;
-    this->swap_flag         = false;
     this->num_events        = 0;
     this->user_provided_max_num_steps = false;
     this->clear_python_refs();
@@ -307,9 +328,9 @@ CyrkErrorCodes CySolverBase::setup()
             setup_status = CyrkErrorCodes::PROPERTY_NOT_SET;
             break;
         }
-        
+
         // Setup PySolver
-        if (this->storage_ptr->config_uptr->cython_extension_class_instance and 
+        if (this->storage_ptr->config_uptr->cython_extension_class_instance and
             this->storage_ptr->config_uptr->py_diffeq_method)
         {
             this->set_cython_extension_instance(
@@ -352,7 +373,7 @@ CyrkErrorCodes CySolverBase::setup()
 
         // Setup y-vectors and pointers
         this->y0_ptr = this->storage_ptr->config_uptr->y0_vec.data();
-    
+
         // Resize the vectors now that we know the number of ys and dys.
         setup_status = this->resize_num_y(this->num_y, this->num_dy);
 
@@ -478,7 +499,7 @@ CyrkErrorCodes CySolverBase::setup()
             for (size_t event_i = 0; event_i < this->num_events; event_i++)
             {
                 Event& current_event = this->storage_ptr->config_uptr.get()->events_vec[event_i];
-    
+
                 // Find new event state array
                 this->event_checks_old_ptr[event_i] = current_event.check(
                     &current_event,
@@ -486,7 +507,7 @@ CyrkErrorCodes CySolverBase::setup()
                     event_y_now_use_ptr,
                     this->args_ptr);
             }
-        }        
+        }
 
         // If t_eval is set then don't save initial conditions. They will be captured during stepping.
         if (not this->use_t_eval)
@@ -523,7 +544,7 @@ CyrkErrorCodes CySolverBase::setup()
 
 NowStatePointers CySolverBase::get_now_state()
 {
-    return NowStatePointers(&this->t_now, this->y_now_ptr, this->dy_now_ptr, this->y_old_ptr, this->dy_old_ptr);
+    return NowStatePointers(&this->t_now, this->y_now_ptr, this->dy_now_ptr);
 }
 
 inline bool CySolverBase::check_status() const
@@ -531,8 +552,8 @@ inline bool CySolverBase::check_status() const
     if (this->storage_ptr) [[likely]]
     {
         // We want to return false for any non-error status, even successful integration.
-        return 
-                (this->storage_ptr->status == CyrkErrorCodes::NO_ERROR) // This will be false if there is an error or if integration is complete.
+        return
+            (this->storage_ptr->status == CyrkErrorCodes::NO_ERROR) // This will be false if there is an error or if integration is complete.
             and (not this->error_flag)
             and this->setup_called;
     }
@@ -560,7 +581,7 @@ CyrkErrorCodes CySolverBase::p_check_events() noexcept
         std::memcpy(&this->dy_tmp2_ptr[this->num_y], &this->dy_now_ptr[this->num_y], sizeof(double) * this->num_extra);
         event_y_now_use_ptr = this->dy_tmp2_ptr;
     }
-    
+
     // Reset any previously active events and find if any are active now.
     this->active_event_indices_vec.resize(0);
 
@@ -572,19 +593,19 @@ CyrkErrorCodes CySolverBase::p_check_events() noexcept
     for (size_t event_i = 0; event_i < this->num_events; event_i++)
     {
         Event& current_event = event_ptr[event_i];
-    
+
         // Find new event state array
         double g_now = current_event.check(
             &current_event,
             this->t_now,
             event_y_now_use_ptr,
             this->args_ptr);
-        
+
         // Check if event was triggered
         // This section mimics scipy's `find_active_events` function.
         double g_old = this->event_checks_old_ptr[event_i];
         bool event_triggered = false;
-        
+
         // Check if event was triggered by looking at the past and current event results.
         // User can specify if they only want an event to trigger when approaching zero from
         // above (direction > 0) or below (direction < 0) or either (direction == 0).
@@ -622,7 +643,7 @@ CyrkErrorCodes CySolverBase::p_check_events() noexcept
         this->root_finder_data.funcalls   = 0;
         this->root_finder_data.iterations = 0;
         this->root_finder_data.error_num  = CyrkErrorCodes::NO_ERROR;
-        
+
         // Below mimics scipy's event `handle_events` function.
         // Find the root of the event function using the BrentQ method.
         current_event.last_root = c_brentq(
@@ -636,7 +657,7 @@ CyrkErrorCodes CySolverBase::p_check_events() noexcept
             &this->root_finder_data,
             &current_event,
             dense_func_ptr);
-        
+
         if (root_finder_data.error_num != CyrkErrorCodes::CONVERGED)
         {
             // Root finding failed.
@@ -656,7 +677,7 @@ CyrkErrorCodes CySolverBase::p_check_events() noexcept
             current_event.y_at_root_vec.data(),
             root_finder_data.y_at_root_ptr,
             this->sizeof_dbl_Ndy);
-        
+
         if (current_event.current_count >= current_event.max_allowed)
         {
             // Termination condition met.
@@ -690,7 +711,7 @@ CyrkErrorCodes CySolverBase::p_check_events() noexcept
         {
             size_t event_i = *iter;
             Event& current_event = event_ptr[event_i];
-            
+
             if (current_event.last_root == this->termination_root)
             {
                 // This was the event (or one of the events) that caused the termination. Record its index.
@@ -729,7 +750,7 @@ CyrkErrorCodes CySolverBase::p_check_events() noexcept
 }
 
 void CySolverBase::take_step()
-{ 
+{
     // We assume `this->check_status()` is true before this method was called.
     // Don't need to check it again.
     if (this->t_now == this->t_end) [[unlikely]]
@@ -826,7 +847,7 @@ void CySolverBase::take_step()
             // Get lowest and highest indices
             auto lower_i = std::lower_bound(this->t_eval_ptr, this->t_eval_ptr + this->len_t_eval, this->t_now) - this->t_eval_ptr;
             auto upper_i = std::upper_bound(this->t_eval_ptr, this->t_eval_ptr + this->len_t_eval, this->t_now) - this->t_eval_ptr;
-                
+
             size_t t_eval_index_new;
             if (lower_i == upper_i)
             {
@@ -868,7 +889,7 @@ void CySolverBase::take_step()
                 t_eval_grt_zero    = (this->t_eval_index_old > t_eval_index_new);
                 t_eval_index_delta = this->t_eval_index_old - t_eval_index_new;
             }
-                
+
             // If t_eval_index_delta == 0 then there are no new interpolations required between the last integration step and now.
             // ^ In this case do not save any data, we are done with this step.
             if (t_eval_grt_zero)
@@ -925,7 +946,7 @@ void CySolverBase::take_step()
                         {
                             // If the user want to capture extra output then we also have to call the differential equation to get that extra output.
                             // To do this we need to hack the current integrators t_now, y_now, and dy_now.
-  
+
                             // TODO: This could be more efficient if we just changed pointers but since the PySolver only stores y_now_ptr, dy_now_ptr, etc at initialization, it won't be able to see changes to new pointer. 
                             // So for now we have to do a lot of copying of data.
 
@@ -954,19 +975,16 @@ void CySolverBase::take_step()
         {
             // Prep for next step
             this->t_old = this->t_now;
-            std::swap(this->y_old_ptr, this->y_now_ptr);
-            std::swap(this->dy_old_ptr, this->dy_now_ptr);
-
-            // Swap flag tells pysolve_ivp which array to use now for y_now_arr and dy_now_arr
-            this->swap_flag = !this->swap_flag;
+            std::memcpy(this->y_old_ptr, this->y_now_ptr, this->sizeof_dbl_Ny);
+            std::memcpy(this->dy_old_ptr, this->dy_now_ptr, this->sizeof_dbl_Ndy);
         }
     }
 
     // Check if the integration is finished and successful.
     if (
-           (this->storage_ptr->status == CyrkErrorCodes::SUCCESSFUL_INTEGRATION)
+        (this->storage_ptr->status == CyrkErrorCodes::SUCCESSFUL_INTEGRATION)
         or (this->storage_ptr->status == CyrkErrorCodes::EVENT_TERMINATED)
-       )
+        )
     {
         this->storage_ptr->success = true;
     }
@@ -986,8 +1004,8 @@ void CySolverBase::solve()
 /* ========================  PySolver Methods  ============================= */
 /* ========================================================================= */
 CyrkErrorCodes CySolverBase::set_cython_extension_instance(
-        PyObject* cython_extension_class_instance,
-        DiffeqMethod py_diffeq_method)
+    PyObject* cython_extension_class_instance,
+    DiffeqMethod py_diffeq_method)
 {
     // First check to see if a python instance has already been installed in this function
     // i.e., setup is being called multiple times.

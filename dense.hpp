@@ -6,7 +6,6 @@
 #include <cstring>
 
 #include "c_common.hpp"
-//#include "cysolution.hpp"
 
 // Forward delcaration of the CySolverResult to avoid circular dependencies
 class CySolverResult;
@@ -42,7 +41,7 @@ public:
     size_t num_y  = 0;  // Number of dependent variables
     size_t num_dy = 0; // Number of total outputs (dy/dt + extra outputs)
 
-/* Methods */
+    /* Methods */
 protected:
 
 public:
@@ -51,7 +50,7 @@ public:
     CySolverDense(
         CySolverResult* solution_ptr_,
         bool set_state
-        );
+    );
 
     virtual void setup(bool set_state);
     virtual void set_state();

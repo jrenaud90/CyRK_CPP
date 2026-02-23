@@ -394,7 +394,7 @@ int main(){
         false, // Dense
         0,     // len t_eval 7070 == 2x; 1767 == 0.5x for tspan of (0, 500))
         0,     // num extra
-        ODEMethod::RK45,      // Method
+        ODEMethod::DOP853,      // Method
         true  // use_resets
     );
 
@@ -438,7 +438,12 @@ int main(){
     // vS-DOP4.4 - Avg  1667.48   PS:   166.748
     // vS-RK4.5 - Avg  543.365   PS:   54.3365
     // vS-DOP4.5 - Avg  1547.58   PS:   154.758
-
+    
+    // CyRK 0.17.0
+    // RK17.0a        - Avg  546.148    PS:   54.6148
+    // DOP17.0a       - Avg  1562       PS:   156.2
+    // RK-DENSE17.0a  - Avg  1019.03    PS:  101.903
+    // DOP-DENSE17.0a - Avg  3369.33    PS:   336.933
 
     return 0;
 }

@@ -15,7 +15,7 @@
 
 class CySolverResult {
 
-// Attributes
+    // Attributes
 protected:
     // Current storage information
     size_t storage_capacity = 0;
@@ -64,7 +64,7 @@ public:
     std::vector<double> solution               = std::vector<double>(PRE_ALLOC_STEPS * PRE_ALLOC_NUMY);
     std::vector<double> time_domain_vec_sorted = std::vector<double>(0);
     std::vector<double>* time_domain_vec_sorted_ptr = nullptr;
-    
+
     // Dense output array
     std::vector<CySolverDense> dense_vec = std::vector<CySolverDense>(0);  // Heap allocated dense solutions for when the user needs these saved.
 
@@ -74,7 +74,7 @@ public:
     // Interpolant time array (used if t_eval is provided)
     std::vector<double> interp_time_vec = std::vector<double>(0);
 
-// Methods
+    // Methods
 protected:
     void p_expand_data_storage();
     void p_finalize();
@@ -84,7 +84,7 @@ public:
     virtual ~CySolverResult();
     CySolverResult();
     CySolverResult(ODEMethod integration_method_);
-    
+
     void update_status(CyrkErrorCodes status_code);
     CyrkErrorCodes setup();
     CyrkErrorCodes setup(ProblemConfig* config_ptr);
@@ -96,5 +96,5 @@ public:
     void build_dense(bool save_dense) noexcept;
     CyrkErrorCodes solve();
     CyrkErrorCodes call(const double t, double* y_interp_ptr);
-    CyrkErrorCodes call_vectorize(const double* t_array_ptr, size_t len_t, double* y_interp_ptr);
+    CyrkErrorCodes call_vectorize(const double* t_array_ptr, const size_t len_t, double* y_interp_ptr);
 };

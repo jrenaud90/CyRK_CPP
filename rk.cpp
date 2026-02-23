@@ -805,7 +805,7 @@ double RK23::p_estimate_error() noexcept
         // --------------------------------------------------------------------
         // Unrolled Dot product between K and E
         // --------------------------------------------------------------------
-        const double error_dot = 
+        const double error_dot =
             (5.0 / 72.0) * l_K_ptr_yi[0] +
             (-1.0 / 12.0) * l_K_ptr_yi[1] +
             (-1.0 / 9.0) * l_K_ptr_yi[2] +
@@ -1220,7 +1220,7 @@ void DOP853::p_compute_stages() noexcept
         k[3] = l_dy_now_ptr[y_i]; // k_3
 
         // Skipping k[1]
-        const double temp_double = 
+        const double temp_double =
             2.41365134159266685502369798665e-1 * k[0] +
             -8.84549479328286085344864962717e-1 * k[2] +
             9.24834003261792003115737966543e-1 * k[3];
@@ -1471,7 +1471,7 @@ double DOP853::p_estimate_error() noexcept
             (0.8192320648511571246570742613e-1) * k[10] +
             (-0.2235530786388629525884427845e-1) * k[11]
             );
-        
+
         error_norm3 += (error_dot3 * error_dot3);
         error_norm5 += (error_dot5 * error_dot5);
     }

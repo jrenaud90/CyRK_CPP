@@ -3,7 +3,7 @@
 #include "c_common.hpp"
 
 
-void round_to_2(size_t &initial_value) noexcept
+void round_to_2(size_t& initial_value) noexcept
 {
     /* Rounds the initial value to the nearest power of 2 */
     // Method is the fastest for 64-bit numbers
@@ -73,6 +73,6 @@ size_t find_expected_size(
 
     temp_expected_size = fmin(temp_expected_size, max_expected);
     size_t expected_size_to_use = (size_t)std::floor(temp_expected_size);
-    
+
     return expected_size_to_use;
 }

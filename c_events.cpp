@@ -1,5 +1,4 @@
 #include "c_events.hpp"
-#include "cysolver.hpp"
 
 
 /* ========================================================================= */
@@ -12,14 +11,14 @@ Event::Event()
 }
 
 Event::Event(
-        EventFunc event_func,
-        size_t max_allowed_,
-        int direction_):
-            cy_func(event_func),
-            max_allowed(max_allowed_),
-            status(CyrkErrorCodes::NO_ERROR),
-            direction(direction_),
-            initialized(true)
+    EventFunc event_func,
+    size_t max_allowed_,
+    int direction_) :
+    cy_func(event_func),
+    max_allowed(max_allowed_),
+    status(CyrkErrorCodes::NO_ERROR),
+    direction(direction_),
+    initialized(true)
 {
     if (this->cy_func)
     {
@@ -30,14 +29,14 @@ Event::Event(
 
 Event::~Event()
 {
-    
+
 }
 
 // C++ / Cython Setup
 CyrkErrorCodes Event::setup(
-        EventFunc event_func,
-        size_t max_allowed_,
-        int direction_)
+    EventFunc event_func,
+    size_t max_allowed_,
+    int direction_)
 {
     // Reset initialized flag.
     this->initialized = false;
@@ -60,10 +59,10 @@ CyrkErrorCodes Event::setup(
 }
 
 double Event::cy_check(
-        double t,
-        double* y_ptr,
-        char* arg_ptr
-    ) noexcept
+    double t,
+    double* y_ptr,
+    char* arg_ptr
+) noexcept
 {
     // Wrapper for the provided function.
     return this->cy_func(t, y_ptr, arg_ptr);
@@ -71,10 +70,10 @@ double Event::cy_check(
 
 // Python hooks
 double Event::py_check(
-        double t,
-        double* y_ptr,
-        char* arg_ptr
-    )
+    double t,
+    double* y_ptr,
+    char* arg_ptr
+)
 {
     // args are not used with pysolver; any additional args are held by the python class and passed in python land.
     if ((not this->use_pysolver) or (not this->cython_extension_class_instance))
@@ -92,8 +91,8 @@ double Event::py_check(
 }
 
 CyrkErrorCodes Event::set_cython_extension_instance(
-        PyObject* cython_extension_class_instance,
-        PyEventMethod pyevent_method)
+    PyObject* cython_extension_class_instance,
+    PyEventMethod pyevent_method)
 {
     // Now proceed to installing python functions.
     this->use_pysolver = true;
@@ -111,7 +110,7 @@ CyrkErrorCodes Event::set_cython_extension_instance(
             return this->status;
         }
     }
-    
+
     // Change the function pointer for the event checker to trigger the pyhook version.
     this->check = &Event::py_check;
 

@@ -12,7 +12,7 @@ CySolverResult::CySolverResult()
 }
 
 CySolverResult::CySolverResult(ODEMethod integration_method_) :
-        integrator_method(integration_method_)
+    integrator_method(integration_method_)
 {
     // The result constructor's only job is to build the solver object and allocate its memory.
     CyrkErrorCodes solver_build_status = this->p_build_solver();
@@ -20,7 +20,7 @@ CySolverResult::CySolverResult(ODEMethod integration_method_) :
 }
 
 /* ========================================================================= */
-/* =========================  Deconstructors  ============================== */
+/* ==========================  Destructors  ================================ */
 /* ========================================================================= */
 CySolverResult::~CySolverResult()
 {
@@ -174,9 +174,9 @@ void CySolverResult::p_finalize()
 
     // Check if the integrator finished
     if (
-           (this->status == CyrkErrorCodes::SUCCESSFUL_INTEGRATION)
+        (this->status == CyrkErrorCodes::SUCCESSFUL_INTEGRATION)
         or (this->status == CyrkErrorCodes::EVENT_TERMINATED)
-       )
+        )
     {
         this->success = true;
     }
@@ -279,7 +279,7 @@ CyrkErrorCodes CySolverResult::setup(ProblemConfig* provided_config_ptr)
         {
             break;
         }
-        
+
         // Ensure the solver was actually initialized.
         if (not this->solver_uptr)
         {
@@ -300,8 +300,8 @@ CyrkErrorCodes CySolverResult::setup(ProblemConfig* provided_config_ptr)
         this->direction_flag       = (this->config_uptr->t_end - this->config_uptr->t_start) >= 0.0;
         this->num_y                = this->config_uptr->num_y;
         this->num_dy               = this->config_uptr->num_dy;
-        this->num_events           = this->config_uptr->events_vec.size();        
-    
+        this->num_events           = this->config_uptr->events_vec.size();
+
         // TODO STORAGE CAPACITY - use previous iteration if set or change to expected size.
         // Storage capacity from previous runs may be larger than expected size. If
         // that is the case then we will just use it instead of reallocating to a smaller size.         
@@ -323,7 +323,7 @@ CyrkErrorCodes CySolverResult::setup(ProblemConfig* provided_config_ptr)
             {
                 this->interp_time_vec.reserve(this->storage_capacity);
             }
-            
+
             // Try to create event storage if needed.
             if (this->num_events > 0)
             {
@@ -344,19 +344,19 @@ CyrkErrorCodes CySolverResult::setup(ProblemConfig* provided_config_ptr)
                     this->event_times[event_i].reserve(initial_event_reserve);
                     this->event_states[event_i].reserve(initial_event_reserve * this->num_dy);
                 }
-            }            
+            }
         }
         catch (std::bad_alloc const&)
         {
             setup_status = CyrkErrorCodes::MEMORY_ALLOCATION_ERROR;
             break;
         }
-            
+
         // If save dense is true and capture extra is true then the dense solutions need to retain the solver to make
         // additional calls to the diffeq. Make sure that the solution class does not delete the solver during finalization.
         // There could be situations where we want to keep the solver in memory even if we are not capturing dense
         // output and not capturing extra.
-        if (this->config_uptr->force_retain_solver or 
+        if (this->config_uptr->force_retain_solver or
             (this->capture_dense_output and this->capture_extra))
         {
             this->retain_solver = true;
@@ -373,9 +373,9 @@ CyrkErrorCodes CySolverResult::setup(ProblemConfig* provided_config_ptr)
         // create a single dense output that will be used to capture the solution at the interpolated time steps.
         // The same goes if the user provided events and did not set dense output to true.
         if (
-               (this->t_eval_provided  and (not this->capture_dense_output))
+            (this->t_eval_provided and (not this->capture_dense_output))
             or ((this->num_events > 0) and (not this->capture_dense_output))
-           )
+            )
         {
             this->dense_vec.emplace_back(this, false);
             this->num_interpolates++;
@@ -394,9 +394,9 @@ CyrkErrorCodes CySolverResult::setup(ProblemConfig* provided_config_ptr)
 
 
 void CySolverResult::save_data(
-        const double new_t,
-        double* const new_solution_y_ptr,
-        double* const new_solution_dy_ptr) noexcept
+    const double new_t,
+    double* const new_solution_y_ptr,
+    double* const new_solution_dy_ptr) noexcept
 {
     this->size++;
     if (this->size > this->storage_capacity)
@@ -428,12 +428,12 @@ void CySolverResult::record_event_data() noexcept
         if (
             (this->num_events > 0) and
             (solver_ptr->active_event_indices_vec.size() > 0)
-       )
+            )
         {
             for (size_t active_event_index : solver_ptr->active_event_indices_vec)
             {
                 Event& current_event = this->config_uptr->events_vec[active_event_index];
-                
+
                 // Save time data
                 this->event_times[active_event_index].push_back(current_event.last_root);
 
@@ -497,10 +497,10 @@ CyrkErrorCodes CySolverResult::solve()
     }
 
     if (this->solver_uptr and (this->status == CyrkErrorCodes::NO_ERROR))
-    {    
+    {
         // Tell the solver to starting solving the problem!
         this->solver_uptr->solve();
-        
+
         // Call the finalizer on the storage class instance.
         // This performs some housekeeping so it should be called even if integration failed.
         this->p_finalize();
@@ -510,7 +510,7 @@ CyrkErrorCodes CySolverResult::solve()
 
 CyrkErrorCodes CySolverResult::call(const double t, double* y_interp_ptr)
 {
-    if (not this->success)
+    if (not this->success) [[unlikely]]
     {
         return CyrkErrorCodes::INTEGRATION_NOT_SUCCESSFUL;
     }
@@ -518,8 +518,21 @@ CyrkErrorCodes CySolverResult::call(const double t, double* y_interp_ptr)
     {
         return CyrkErrorCodes::DENSE_OUTPUT_NOT_SAVED;
     }
-    if ((not y_interp_ptr) or (t < this->config_uptr->t_start) or (t > this->config_uptr->t_end))
+    // Safety Catch: Ensure we have dense output available.
+    if (this->dense_vec.size() == 0) [[unlikely]]
     {
+        return CyrkErrorCodes::DENSE_OUTPUT_NOT_SAVED;
+    }
+    if (not y_interp_ptr) [[unlikely]]
+    {
+        // nullptr provided
+        return CyrkErrorCodes::ARGUMENT_ERROR;
+    }
+    double min_t = std::min(this->config_uptr->t_start, this->config_uptr->t_end);
+    double max_t = std::max(this->config_uptr->t_start, this->config_uptr->t_end);
+    if ((t < min_t) or (t > max_t)) [[unlikely]]
+    {
+        // t is not within solution domain.
         return CyrkErrorCodes::ARGUMENT_ERROR;
     }
 
@@ -532,65 +545,57 @@ CyrkErrorCodes CySolverResult::call(const double t, double* y_interp_ptr)
     {
         interp_time_vec_len_touse = this->size;
     }
-    // SciPy uses np.searchedsorted which as far as I can tell works the same as bibnary search with guess
+    // SciPy uses np.searchedsorted which as far as I can tell works the same as binary search with guess
     // Except that it is searchedsorted is 1 more than binary search.
     // This may only hold if the integration is in the forward direction.
-    // TODO: See if this holds for backwards integration and update if needed.
     // Get a guess for binary search
-    size_t closest_index;
-
-    // Check if there are any t_eval steps between this new index and the last index.
-    // Get lowest and highest indices
+    size_t closest_index = 0;
     double* time_domain_sorted_ptr = this->time_domain_vec_sorted_ptr->data();
-    auto lower_i = std::lower_bound(
-        time_domain_sorted_ptr,
-        time_domain_sorted_ptr + interp_time_vec_len_touse,
-        t) - time_domain_sorted_ptr;
-    
-    auto upper_i = std::upper_bound(
-        time_domain_sorted_ptr,
-        time_domain_sorted_ptr + interp_time_vec_len_touse,
-        t) - time_domain_sorted_ptr;
-        
-    if (lower_i == upper_i)
+
+    // Unlikely, but if there is only one interpolator, then it does not matter if we are doing
+    //  forward or backward integration. There is only one function to call. 
+    // If this is the case though then leave closest_index == 0.
+    if (this->dense_vec.size() > 1) [[likely]]
     {
-        // Only 1 index came back wrapping the value. See if it is different from before.
-        closest_index = lower_i;  // Doesn't matter which one we choose
-    }
-    else if (this->direction_flag)
-    {
-        // Two different indicies returned. Since we are working our way from low to high values we want the upper one.
-        closest_index = upper_i;
-    }
-    else
-    {
-        // Two different indicies returned. Since we are working our way from high to low values we want the lower one.
-        closest_index = lower_i;
+
+        if (this->direction_flag) [[likely]]
+        {
+            // Forward integration: Use upper_bound to find the first element strictly greater than t.
+            // The interpolator we want is the step just before that element.
+            auto upper_i = std::upper_bound(
+                time_domain_sorted_ptr,
+                time_domain_sorted_ptr + interp_time_vec_len_touse,
+                t) - time_domain_sorted_ptr;
+
+            closest_index = upper_i;
+        }
+        else
+        {
+            // Backward integration: Sorted array is [0.0, ..., 10.0]. 
+            // Use lower_bound to find the first element >= t. 
+            // We translate this back to the original descending index.
+            auto lower_i = std::lower_bound(
+                time_domain_sorted_ptr,
+                time_domain_sorted_ptr + interp_time_vec_len_touse,
+                t) - time_domain_sorted_ptr;
+
+            closest_index = interp_time_vec_len_touse - lower_i - 1;
+        }
     }
 
-    // Clean up closest index
-    if (this->direction_flag)
+    // Safety Catch: Clamp the index to the bounds of the dense_vec array.
+    if (closest_index >= this->dense_vec.size())
     {
-        closest_index = std::min<size_t>(std::max<size_t>(closest_index, 0), interp_time_vec_len_touse - 1);
-    }
-    else
-    {
-        closest_index = interp_time_vec_len_touse - closest_index - 1;
-        closest_index = std::min<size_t>(std::max<size_t>(closest_index, 1), interp_time_vec_len_touse - 1);
-    }
-
-    if (closest_index > this->dense_vec.size())
-    {
-        return CyrkErrorCodes::BOUNDS_ERROR;
+        closest_index = this->dense_vec.size() - 1;
     }
 
     // Call interpolant to update y
     this->dense_vec[closest_index].call(t, y_interp_ptr);
-    
+
     return CyrkErrorCodes::NO_ERROR;
 }
 
-CyrkErrorCodes CySolverResult::call_vectorize(const double* t_array_ptr, size_t len_t, double* y_interp_ptr)
+CyrkErrorCodes CySolverResult::call_vectorize(const double* t_array_ptr, const size_t len_t, double* y_interp_ptr)
 {
     double* y_sub_ptr;
     CyrkErrorCodes sub_status = CyrkErrorCodes::NO_ERROR;
@@ -601,7 +606,7 @@ CyrkErrorCodes CySolverResult::call_vectorize(const double* t_array_ptr, size_t 
         y_sub_ptr = &y_interp_ptr[this->num_dy * i];
 
         sub_status = this->call(t_array_ptr[i], y_sub_ptr);
-        
+
         if (sub_status != CyrkErrorCodes::NO_ERROR)
         {
             break;
